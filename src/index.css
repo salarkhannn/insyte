@@ -1,0 +1,66 @@
+@import "tailwindcss";
+
+/* PowerBI-inspired design system */
+@theme {
+  /* Colors */
+  --color-primary: #217346;
+  --color-secondary: #605E5C;
+  --color-surface: #FAF9F8;
+  --color-canvas: #FFFFFF;
+  --color-sidebar: #F3F2F1;
+  --color-border: #EDEBE9;
+  --color-text-primary: #323130;
+  --color-text-secondary: #605E5C;
+  --color-text-disabled: #A19F9D;
+  
+  /* Chart colors */
+  --color-chart-1: #217346;
+  --color-chart-2: #0078D4;
+  --color-chart-3: #E74856;
+  --color-chart-4: #FFB900;
+  --color-chart-5: #8764B8;
+  --color-chart-6: #00B294;
+  --color-chart-7: #FF8C00;
+  
+  /* Fonts */
+  --font-sans: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  
+  /* Spacing */
+  --spacing-sidebar: 240px;
+  --spacing-toolbar: 48px;
+  --spacing-statusbar: 24px;
+}
+
+/* Base styles */
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+  font-family: var(--font-sans);
+  background-color: var(--color-surface);
+  color: var(--color-text-primary);
+}
+
+/* Utility classes */
+.scrollbar-thin {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-secondary) transparent;
+}
+
+.scrollbar-thin::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background-color: var(--color-secondary);
+  border-radius: 3px;
+}
+
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
