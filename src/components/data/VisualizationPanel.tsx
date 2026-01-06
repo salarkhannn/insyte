@@ -1,4 +1,4 @@
-import { BarChart3, LineChart, PieChart, ScatterChart, AreaChart } from "lucide-react";
+import { BarChart3, LineChart, PieChart, ScatterChart, AreaChart, ChartNoAxesColumn } from "lucide-react";
 import { cn } from "../../utils";
 
 const chartTypes = [
@@ -7,6 +7,7 @@ const chartTypes = [
     { id: "area", icon: AreaChart, label: "Area" },
     { id: "pie", icon: PieChart, label: "Pie" },
     { id: "scatter", icon: ScatterChart, label: "Scatter" },
+    { id: "histogram", icon: ChartNoAxesColumn, label: "Histogram" }
 ] as const;
 
 export function VisualizationPanel() {
