@@ -2,29 +2,26 @@ import { useAppStore } from "../../stores/appStore";
 import { Loader2 } from "lucide-react";
 
 export function StatusBar() {
-    const { dataLoaded, fileName, rowCount, columns, isProcessing } =
-        useAppStore();
+    const { dataLoaded, fileName, rowCount, columns, isProcessing } = useAppStore();
 
     return (
-        <footer className="h-6 bg-sidebar border-t border-border flex items-center px-3 text-xs text-text-secondary shrink-0">
-            <div className="flex items-center gap-4">
-                {isProcessing ? (
-                    <span className="flex items-center gap-1.5">
-                        <Loader2 size={12} className="animate-spin" />
-                        Processing...
-                    </span>
-                ) : (
-                    <span>Ready</span>
-                )}
-            </div>
+        <footer className="h-[22px] bg-sidebar border-t border-border flex items-center px-3 text-[11px] text-text-muted shrink-0">
+            {isProcessing ? (
+                <span className="flex items-center gap-1">
+                    <Loader2 size={10} className="animate-spin" />
+                    Processing
+                </span>
+            ) : (
+                <span>Ready</span>
+            )}
 
             <div className="flex-1" />
 
             {dataLoaded && (
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3">
                     <span>{fileName}</span>
-                    <span>Rows: {rowCount.toLocaleString()}</span>
-                    <span>Columns: {columns?.length}</span>
+                    <span>{rowCount.toLocaleString()} rows</span>
+                    <span>{columns?.length} cols</span>
                 </div>
             )}
         </footer>

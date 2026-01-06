@@ -12,43 +12,41 @@ export function QueryInput() {
         if (!query.trim() || isProcessing) return;
 
         setProcessing(true);
-        console.log("Processing query:", query);
-
         setTimeout(() => {
             setProcessing(false);
             setQuery("");
-        }, 1000);
+        }, 800);
     };
 
     return (
         <form
             onSubmit={handleSubmit}
-            className="bg-canvas border border-border rounded-lg shadow-sm flex items-center px-4 py-2 gap-3"
+            className="bg-surface border border-border rounded-sm flex items-center px-3 h-9 gap-2"
         >
             <input
                 type="text"
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
-                placeholder='Ask a question, e.g. "Show revenue by month"'
+                placeholder="Ask: Show revenue by month..."
                 disabled={isProcessing}
                 className={cn(
-                    "flex-1 bg-transparent outline-none text-sm text-text-primary",
-                    "placeholder:text-text-disabled disabled:opacity-50"
+                    "flex-1 bg-transparent outline-none text-sm text-text",
+                    "placeholder:text-text-muted disabled:opacity-50"
                 )}
             />
             <button
                 type="submit"
                 disabled={!query.trim() || isProcessing}
                 className={cn(
-                    "w-8 h-8 rounded flex items-center justify-center transition-colors",
-                    "bg-primary text-white hover:bg-primary/90",
-                    "disabled:opacity-50 disabled:cursor-not-allowed"
+                    "w-6 h-6 rounded-sm flex items-center justify-center transition-colors",
+                    "bg-primary text-white hover:bg-primary-hover",
+                    "disabled:opacity-40 disabled:hover:bg-primary"
                 )}
             >
                 {isProcessing ? (
-                    <Loader2 size={16} className="animate-spin" />
+                    <Loader2 size={14} className="animate-spin" />
                 ) : (
-                    <Send size={16} />
+                    <Send size={14} />
                 )}
             </button>
         </form>
