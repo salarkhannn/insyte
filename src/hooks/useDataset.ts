@@ -1,9 +1,13 @@
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { useAppStore } from "../stores/appStore";
+import { useDataStore } from "../stores/dataStore";
 import { useUiStore } from "../stores/uiStore";
-import type { Column } from "../types";
+import { openFileDialog, loadFile, getDataPage, clearData } from "../services/fileService";
 
 export function useDataset() {
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
     const {
         dataLoaded,
         fileName,
@@ -14,35 +18,59 @@ export function useDataset() {
         setDataset,
         clearDataset,
         setProcessing,
-        setError,
+        setError: setAppError,
     } = useAppStore();
 
+    const { setRowData, clearData: clearDataStore } = useDataStore();
     const { addRecentFile } = useUiStore();
 
-    const loadDataset = useCallback(
-        async (info: {
-            fileName: string;
-            filePath: string;
-            columns: Column[];
-            rowCount: number;
-            fileSize: number;
-        }) => {
-            setProcessing(true, "Loading dataset");
-            try {
-                setDataset(info);
-                addRecentFile(info.filePath);
-            } catch (err) {
-                setError(err instanceof Error ? err.message : "Failed to load dataset");
-            } finally {
-                setProcessing(false);
-            }
-        },
-        [setDataset, setProcessing, setError, addRecentFile]
-    );
+    const openFile = useCallback(async () => {
+        setIsLoading(true);
+        setError(null);
 
-    const unloadDataset = useCallback(() => {
-        clearDataset();
-    }, [clearDataset]);
+        try {
+            const path = await openFileDialog();
+            if (!path) {
+                setIsLoading(false);
+                return;
+            }
+
+            setProcessing(true, "Loading file");
+
+            const info = await loadFile(path);
+
+            setDataset({
+                fileName: info.fileName,
+                filePath: info.filePath,
+                columns: info.columns,
+                rowCount: info.rowCount,
+                fileSize: info.fileSize,
+            });
+
+            addRecentFile(info.filePath);
+
+            const page = await getDataPage(0, 10000, info.columns);
+            setRowData(page.rows, page.totalRows);
+
+            setProcessing(false);
+        } catch (err) {
+            const message = err instanceof Error ? err.message : "Failed to load file";
+            setError(message);
+            setAppError(message);
+        } finally {
+            setIsLoading(false);
+        }
+    }, [setDataset, setProcessing, setAppError, addRecentFile, setRowData]);
+
+    const closeFile = useCallback(async () => {
+        try {
+            await clearData();
+            clearDataset();
+            clearDataStore();
+        } catch (err) {
+            console.error("Failed to clear data:", err);
+        }
+    }, [clearDataset, clearDataStore]);
 
     return {
         dataLoaded,
@@ -51,7 +79,9 @@ export function useDataset() {
         columns,
         rowCount,
         fileSize,
-        loadDataset,
-        unloadDataset,
+        isLoading,
+        error,
+        openFile,
+        closeFile,
     };
 }

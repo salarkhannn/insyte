@@ -5,8 +5,10 @@ import {
     BarChart3,
     PanelLeftClose,
     PanelLeft,
+    X,
 } from "lucide-react";
 import { useAppStore } from "../../stores/appStore";
+import { useDataset } from "../../hooks/useDataset";
 import { cn } from "../../utils";
 
 interface ToolbarButtonProps {
@@ -49,6 +51,7 @@ function Divider() {
 export function Toolbar() {
     const { activeView, setActiveView, sidebarCollapsed, toggleSidebar, dataLoaded } =
         useAppStore();
+    const { openFile, closeFile, isLoading } = useDataset();
 
     return (
         <header className="h-10 bg-surface border-b border-border flex items-center px-2 gap-0.5 shrink-0">
@@ -66,8 +69,23 @@ export function Toolbar() {
 
             <Divider />
 
-            <ToolbarButton icon={<FolderOpen size={16} />} label="Open" />
-            <ToolbarButton icon={<Save size={16} />} label="Save" disabled={!dataLoaded} />
+            <ToolbarButton
+                icon={<FolderOpen size={16} />}
+                label="Open"
+                onClick={openFile}
+                disabled={isLoading}
+            />
+            <ToolbarButton
+                icon={<X size={16} />}
+                label="Close"
+                onClick={closeFile}
+                disabled={!dataLoaded || isLoading}
+            />
+            <ToolbarButton
+                icon={<Save size={16} />}
+                label="Save"
+                disabled={!dataLoaded}
+            />
 
             <Divider />
 
