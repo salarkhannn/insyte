@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useRef } from "react";
 import { AgGridReact } from "ag-grid-react";
-import type { ColDef, GridReadyEvent, ColumnResizedEvent, SortChangedEvent, FilterChangedEvent, CellClickedEvent } from "ag-grid-community";
+import type { ColDef, GridReadyEvent, SortChangedEvent, FilterChangedEvent, CellClickedEvent } from "ag-grid-community";
 import { AllCommunityModule, ModuleRegistry, themeQuartz } from "ag-grid-community";
 import type { Column } from "../../types";
 

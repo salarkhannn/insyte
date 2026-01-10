@@ -1,8 +1,9 @@
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useAppStore, useDataStore } from "../stores";
+import { getDataPage } from "../services/fileService";
 
 export function useTableData() {
-    const { dataLoaded, filePath } = useAppStore();
+    const { dataLoaded, filePath, columns } = useAppStore();
     const {
         rowData,
         totalRows,
@@ -19,11 +20,27 @@ export function useTableData() {
         clearData,
     } = useDataStore();
 
-    const fetchPage = useCallback(async () => {
-        if (!dataLoaded || !filePath) return;
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
-        // ADD BACKEND INTEGRATION FOR FOR PAGINATION HERE
-    }, [dataLoaded, filePath, currentPage, pageSize, sortColumn, sortDirection, filters]);
+    const fetchPage = useCallback(async () => {
+        if (!dataLoaded || !filePath || columns.length === 0) return;
+
+        setIsLoading(true);
+        setError(null);
+
+        try {
+            const offset = currentPage * pageSize;
+            const page = await getDataPage(offset, pageSize, columns);
+            setRowData(page.rows, page.totalRows);
+        } catch (err) {
+            const message = err instanceof Error ? err.message : "Failed to fetch data";
+            setError(message);
+            console.error("Error fetching data page:", err);
+        } finally {
+            setIsLoading(false);
+        }
+    }, [dataLoaded, filePath, columns, currentPage, pageSize, setRowData]);
 
     useEffect(() => {
         fetchPage();
@@ -58,6 +75,8 @@ export function useTableData() {
         sortColumn,
         sortDirection,
         filters,
+        isLoading,
+        error,
         setPageSize,
         setSort,
         setFilters,
@@ -65,5 +84,6 @@ export function useTableData() {
         prevPage,
         goToPage,
         clearData,
+        refetch: fetchPage,
     };
 }
