@@ -1,0 +1,1 @@
+The code you write should not contain any comments or practices that might indicate use of LLM. the code should read and work like it was written by a highly skilled engineer.

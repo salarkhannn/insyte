@@ -1,59 +1,63 @@
-import { useCallback } from "react";
+import { useCallback, useState } from "react";
 import { useAppStore } from "../stores/appStore";
 import { useQueryStore } from "../stores/queryStore";
+import { processAiQuery } from "../services/aiService";
 import type { VisualizationSpec } from "../types";
 
 export function useQuery() {
-    const { setVisualization, setProcessing, setError } = useAppStore();
+    const [isLoading, setIsLoading] = useState(false);
+    const [error, setError] = useState<string | null>(null);
+
+    const { setVisualization, setActiveView, dataLoaded } = useAppStore();
     const { currentQuery, setCurrentQuery, addToHistory, history } = useQueryStore();
 
     const submitQuery = useCallback(
-        async (query: string) => {
-            if (!query.trim()) return;
+        async (query: string): Promise<VisualizationSpec | null> => {
+            if (!query.trim() || !dataLoaded) {
+                return null;
+            }
 
-            setProcessing(true, "Processing query");
+            setIsLoading(true);
+            setError(null);
 
             try {
-                // Backend integration will go here
-                const mockResult: VisualizationSpec = {
-                    chartType: "bar",
-                    xField: "category",
-                    yField: "value",
-                    aggregation: "sum",
-                    groupBy: null,
-                    sortBy: "none",
-                    sortOrder: "asc",
-                    title: query,
-                    filters: [],
-                };
-
+                const spec = await processAiQuery(query.trim());
+                setVisualization(spec);
+                setActiveView("chart");
                 addToHistory({
-                    query,
-                    visualization: mockResult,
+                    query: query.trim(),
+                    visualization: spec,
                     success: true,
                 });
-
-                setVisualization(mockResult);
+                return spec;
             } catch (err) {
-                const errorMessage = err instanceof Error ? err.message : "Query failed";
+                const errorMessage = err instanceof Error ? err.message : String(err);
+                setError(errorMessage);
                 addToHistory({
-                    query,
+                    query: query.trim(),
                     visualization: null,
                     success: false,
                     error: errorMessage,
                 });
-                setError(errorMessage);
+                return null;
             } finally {
-                setProcessing(false);
+                setIsLoading(false);
             }
         },
-        [setVisualization, setProcessing, setError, addToHistory]
+        [dataLoaded, setVisualization, setActiveView, addToHistory]
     );
+
+    const clearError = useCallback(() => {
+        setError(null);
+    }, []);
 
     return {
         currentQuery,
         setCurrentQuery,
         submitQuery,
         history,
+        isLoading,
+        error,
+        clearError,
     };
 }

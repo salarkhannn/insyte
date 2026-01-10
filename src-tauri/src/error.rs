@@ -45,3 +45,33 @@ impl From<calamine::XlsxError> for DataError {
         DataError::ReadError(err.to_string())
     }
 }
+
+#[derive(Debug, thiserror::Error)]
+pub enum AIError {
+    #[error("API request failed: {0}")]
+    RequestFailed(String),
+    
+    #[error("Invalid API key")]
+    InvalidApiKey,
+    
+    #[error("API key not configured")]
+    ApiKeyNotSet,
+    
+    #[error("Failed to parse API response: {0}")]
+    ParseError(String),
+    
+    #[error("Rate limit exceeded")]
+    RateLimitExceeded,
+    
+    #[error("Model not available: {0}")]
+    ModelNotAvailable(String),
+}
+
+impl serde::Serialize for AIError {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(&self.to_string())
+    }
+}
