@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { VisualizationSpec } from "../types";
+import type { VisualizationSpec, ChartData } from "../types";
 
 interface BackendVisualizationSpec {
     chart_type: "bar" | "line" | "area" | "pie" | "scatter";
@@ -15,6 +15,21 @@ interface BackendVisualizationSpec {
         operator: string;
         value: unknown;
     }>;
+}
+
+interface BackendChartData {
+    labels: string[];
+    datasets: Array<{
+        label: string;
+        data: number[];
+        color: string | null;
+    }>;
+    metadata: {
+        title: string;
+        x_label: string;
+        y_label: string;
+        total_records: number;
+    };
 }
 
 interface BackendSettings {
@@ -51,6 +66,41 @@ function transformVisualizationSpec(spec: BackendVisualizationSpec): Visualizati
     };
 }
 
+function transformVisualizationSpecToBackend(spec: VisualizationSpec): BackendVisualizationSpec {
+    return {
+        chart_type: spec.chartType as BackendVisualizationSpec["chart_type"],
+        x_field: spec.xField,
+        y_field: spec.yField,
+        aggregation: spec.aggregation,
+        group_by: spec.groupBy,
+        sort_by: spec.sortBy,
+        sort_order: spec.sortOrder,
+        title: spec.title,
+        filters: spec.filters.map((f) => ({
+            column: f.column,
+            operator: f.operator,
+            value: f.value,
+        })),
+    };
+}
+
+function transformChartData(data: BackendChartData): ChartData {
+    return {
+        labels: data.labels,
+        datasets: data.datasets.map((d) => ({
+            label: d.label,
+            data: d.data,
+            color: d.color ?? undefined,
+        })),
+        metadata: {
+            title: data.metadata.title,
+            xLabel: data.metadata.x_label,
+            yLabel: data.metadata.y_label,
+            totalRecords: data.metadata.total_records,
+        },
+    };
+}
+
 function transformSettingsFromBackend(settings: BackendSettings): AppSettings {
     return {
         groqApiKey: settings.groq_api_key,
@@ -74,6 +124,12 @@ function transformSettingsToBackend(settings: AppSettings): BackendSettings {
 export async function processAiQuery(query: string): Promise<VisualizationSpec> {
     const spec = await invoke<BackendVisualizationSpec>("process_ai_query", { query });
     return transformVisualizationSpec(spec);
+}
+
+export async function executeVisualizationQuery(spec: VisualizationSpec): Promise<ChartData> {
+    const backendSpec = transformVisualizationSpecToBackend(spec);
+    const data = await invoke<BackendChartData>("execute_visualization_query", { spec: backendSpec });
+    return transformChartData(data);
 }
 
 export async function getSettings(): Promise<AppSettings> {

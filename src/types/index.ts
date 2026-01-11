@@ -55,10 +55,18 @@ export interface QueryHistoryItem {
 export interface ChartData {
     labels: string[];
     datasets: Dataset[];
+    metadata?: ChartMetadata;
 }
 
 export interface Dataset {
     label: string;
     data: number[];
     color?: string;
+}
+
+export interface ChartMetadata {
+    title: string;
+    xLabel: string;
+    yLabel: string;
+    totalRecords: number;
 }

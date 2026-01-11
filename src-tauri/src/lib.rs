@@ -4,6 +4,7 @@ mod ai;
 mod settings;
 
 use ai::process_ai_query;
+use data::execute_visualization_query;
 use data::ingest::{clear_data, get_data_page, list_excel_sheets, load_csv, load_excel, load_json};
 use data::state::AppDataState;
 use settings::{get_settings, update_settings, set_api_key, validate_api_key};
@@ -34,6 +35,7 @@ pub fn run() {
             set_api_key,
             validate_api_key,
             process_ai_query,
+            execute_visualization_query,
         ])
         .setup(|app| {
             let data_state = AppDataState::default();
