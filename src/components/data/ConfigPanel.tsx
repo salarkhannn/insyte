@@ -7,7 +7,6 @@ import {
     AreaChart,
     ChevronDown,
     ChevronRight,
-    Play,
     RotateCcw,
     Rows,
     Columns,
@@ -27,12 +26,12 @@ const chartTypes: Array<{
     icon: typeof BarChart3;
     label: string;
 }> = [
-    { id: "bar", icon: BarChart3, label: "Bar" },
-    { id: "line", icon: LineChart, label: "Line" },
-    { id: "area", icon: AreaChart, label: "Area" },
-    { id: "pie", icon: PieChart, label: "Pie" },
-    { id: "scatter", icon: ScatterChart, label: "Scatter" },
-];
+        { id: "bar", icon: BarChart3, label: "Bar" },
+        { id: "line", icon: LineChart, label: "Line" },
+        { id: "area", icon: AreaChart, label: "Area" },
+        { id: "pie", icon: PieChart, label: "Pie" },
+        { id: "scatter", icon: ScatterChart, label: "Scatter" },
+    ];
 
 const aggregations: Array<{ id: VisualizationSpec["aggregation"]; label: string }> = [
     { id: "sum", label: "Sum" },
@@ -143,15 +142,16 @@ export function ConfigPanel() {
 
     const { numeric, categorical, all } = getFieldsByType(columns);
 
-    const handleApply = useCallback(() => {
-        const spec = buildSpec(columns);
-        if (spec) {
-            setVisualization(spec);
-            setActiveView("chart");
+    // Auto-apply changes in real-time
+    useEffect(() => {
+        if (dataLoaded && xField && yField) {
+            const spec = buildSpec(columns);
+            if (spec) {
+                setVisualization(spec);
+                setActiveView("chart");
+            }
         }
-    }, [buildSpec, columns, setVisualization, setActiveView]);
-
-    const canApply = dataLoaded && xField && yField;
+    }, [dataLoaded, chartType, xField, yField, aggregation, sortBy, sortOrder, buildSpec, columns, setVisualization, setActiveView]);
 
     const toggleGroup = useCallback((group: string) => {
         setExpandedGroups(prev => {
@@ -458,12 +458,12 @@ export function ConfigPanel() {
             </div>
 
             {/* Action Buttons */}
-            <div className="p-3 border-t border-neutral-200 flex gap-2 bg-neutral-50">
+            <div className="p-3 border-t border-neutral-200 bg-neutral-50">
                 <button
                     onClick={reset}
                     disabled={!dataLoaded}
                     className={cn(
-                        "flex-1 h-9 flex items-center justify-center gap-1.5 text-xs font-semibold rounded border",
+                        "w-full h-9 flex items-center justify-center gap-1.5 text-xs font-semibold rounded border",
                         dataLoaded
                             ? "text-neutral-700 border-neutral-300 bg-white hover:bg-neutral-100 hover:border-neutral-400"
                             : "opacity-50 cursor-not-allowed bg-neutral-100 border-neutral-200"
@@ -471,19 +471,6 @@ export function ConfigPanel() {
                 >
                     <RotateCcw size={13} />
                     Reset
-                </button>
-                <button
-                    onClick={handleApply}
-                    disabled={!canApply}
-                    className={cn(
-                        "flex-1 h-9 flex items-center justify-center gap-1.5 text-xs font-semibold rounded text-white",
-                        canApply
-                            ? "bg-blue-600 hover:bg-blue-700 shadow-sm"
-                            : "bg-blue-300 cursor-not-allowed"
-                    )}
-                >
-                    <Play size={13} />
-                    Apply
                 </button>
             </div>
         </div>
