@@ -1,3 +1,5 @@
+export * from "./chartConfigs";
+
 export interface Column {
     name: string;
     dtype: "string" | "integer" | "float" | "date" | "boolean";
@@ -8,12 +10,13 @@ export interface VisualizationSpec {
     chartType: "bar" | "line" | "area" | "pie" | "scatter";
     xField: string;
     yField: string;
-    aggregation: "sum" | "avg" | "count" | "max" | "min";
+    aggregation: "sum" | "avg" | "count" | "max" | "min" | "median";
     groupBy: string | null;
     sortBy: "x" | "y" | "none";
-    sortOrder: "asc" | "desc";
+    sortOrder: "asc" | "desc" | "none";
     title: string;
     filters: FilterSpec[];
+    chartConfig?: import("./chartConfigs").ChartConfig;
 }
 
 export interface FilterSpec {

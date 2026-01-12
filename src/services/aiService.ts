@@ -84,14 +84,17 @@ function transformVisualizationSpec(spec: BackendVisualizationSpec): Visualizati
 }
 
 function transformVisualizationSpecToBackend(spec: VisualizationSpec): BackendVisualizationSpec {
+    const aggregation = spec.aggregation === "median" ? "avg" : spec.aggregation;
+    const sortOrder = spec.sortOrder === "none" ? "asc" : spec.sortOrder;
+    
     return {
         chart_type: spec.chartType as BackendVisualizationSpec["chart_type"],
         x_field: spec.xField,
         y_field: spec.yField,
-        aggregation: spec.aggregation,
+        aggregation: aggregation as BackendVisualizationSpec["aggregation"],
         group_by: spec.groupBy,
         sort_by: spec.sortBy,
-        sort_order: spec.sortOrder,
+        sort_order: sortOrder as BackendVisualizationSpec["sort_order"],
         title: spec.title,
         filters: spec.filters.map((f) => ({
             column: f.column,

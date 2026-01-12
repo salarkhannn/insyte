@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { RefreshCw, Maximize2, Minimize2, Download, Loader2, AlertCircle, Info, AlertTriangle } from "lucide-react";
 import { useAppStore } from "../../stores/appStore";
+import { useChartConfigStore } from "../../stores/chartConfigStore";
 import { executeVisualizationQuery, executeScatterQuery } from "../../services/aiService";
 import { BarChart, LineChart, AreaChart, PieChart, ScatterChart } from "./charts";
 import { cn } from "../../utils";
@@ -52,6 +53,8 @@ export function ChartContainer({ spec }: ChartContainerProps) {
     const [showReductionDetails, setShowReductionDetails] = useState(false);
 
     const { setProcessing } = useAppStore();
+    // Subscribe to chart config store for real-time updates
+    const chartConfig = useChartConfigStore((state) => state.config);
 
     const fetchData = useCallback(async () => {
         setIsLoading(true);
@@ -87,17 +90,18 @@ export function ChartContainer({ spec }: ChartContainerProps) {
     const renderChart = () => {
         if (!chartData) return null;
 
+        // Use chartConfig from store subscription (updates trigger re-render)
         switch (spec.chartType) {
             case "bar":
-                return <BarChart data={chartData} />;
+                return <BarChart data={chartData} config={chartConfig.type === "bar" ? chartConfig : undefined} />;
             case "line":
-                return <LineChart data={chartData} />;
+                return <LineChart data={chartData} config={chartConfig.type === "line" ? chartConfig : undefined} />;
             case "area":
-                return <AreaChart data={chartData} />;
+                return <AreaChart data={chartData} config={chartConfig.type === "area" ? chartConfig : undefined} />;
             case "pie":
-                return <PieChart data={chartData} />;
+                return <PieChart data={chartData} config={chartConfig.type === "pie" ? chartConfig : undefined} />;
             case "scatter":
-                return <ScatterChart data={chartData} />;
+                return <ScatterChart data={chartData} config={chartConfig.type === "scatter" ? chartConfig : undefined} />;
             default:
                 return <BarChart data={chartData} />;
         }
