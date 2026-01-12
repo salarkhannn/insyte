@@ -7,29 +7,56 @@ import {
     Legend,
 } from "recharts";
 import type { PieLabelRenderProps } from "recharts";
-import type { ChartData } from "../../../types";
-import { chartConfig, getChartColor, formatValue } from "./chartConfig";
+import type { ChartData, PieChartConfig } from "../../../types";
+import { pieChartDefaults } from "./chartDefaults";
+import { getChartColor, formatValue } from "./chartConfig";
 
 interface PieChartProps {
     data: ChartData;
-    donut?: boolean;
-    showLabels?: boolean;
+    config?: Partial<PieChartConfig>;
 }
 
-export function PieChart({ data, donut = false, showLabels = true }: PieChartProps) {
+export function PieChart({ data, config }: PieChartProps) {
+    const cfg = { ...pieChartDefaults, ...config };
+    
     const dataset = data.datasets[0];
     if (!dataset) return null;
 
     const total = dataset.data.reduce((sum, val) => sum + val, 0);
-
-    const chartData = data.labels.map((label, index) => ({
+    
+    let processedData = data.labels.map((label, index) => ({
         name: label,
         value: dataset.data[index],
         percentage: total > 0 ? (dataset.data[index] / total) * 100 : 0,
     }));
 
+    if (cfg.sortOrder !== "none") {
+        processedData.sort((a, b) => 
+            cfg.sortOrder === "desc" ? b.value - a.value : a.value - b.value
+        );
+    }
+
+    if (processedData.length > cfg.maxSlices) {
+        const topSlices = processedData.slice(0, cfg.maxSlices - 1);
+        const otherSlices = processedData.slice(cfg.maxSlices - 1);
+        const otherValue = otherSlices.reduce((sum, item) => sum + item.value, 0);
+        const otherPercentage = otherSlices.reduce((sum, item) => sum + item.percentage, 0);
+        
+        processedData = [
+            ...topSlices,
+            { name: cfg.otherSliceLabel, value: otherValue, percentage: otherPercentage },
+        ];
+    }
+
+    const formatLabel = (template: string, name: string, value: number, percent: number) => {
+        return template
+            .replace("{name}", name)
+            .replace("{value}", formatValue(value))
+            .replace("{percent}", percent.toFixed(1));
+    };
+
     const renderLabel = (props: PieLabelRenderProps) => {
-        const { cx, cy, midAngle, innerRadius, outerRadius, percent, name } = props;
+        const { cx, cy, midAngle, innerRadius, outerRadius, percent, name, value } = props;
         
         if (
             typeof cx !== "number" ||
@@ -42,72 +69,124 @@ export function PieChart({ data, donut = false, showLabels = true }: PieChartPro
             return null;
         }
 
-        if (percent < 0.05) return null;
+        const minAngle = (cfg.labelMinAngle / 360);
+        if (percent < minAngle) return null;
 
         const RADIAN = Math.PI / 180;
-        const radius = innerRadius + (outerRadius - innerRadius) * 1.4;
+        
+        if (cfg.labelPosition === "inside") {
+            const radius = innerRadius + (outerRadius - innerRadius) * 0.5;
+            const x = cx + radius * Math.cos(-midAngle * RADIAN);
+            const y = cy + radius * Math.sin(-midAngle * RADIAN);
+            
+            return (
+                <text
+                    x={x}
+                    y={y}
+                    fill="#fff"
+                    textAnchor="middle"
+                    dominantBaseline="central"
+                    fontSize={cfg.tooltip.fontSize}
+                    fontFamily={cfg.tooltip.fontFamily}
+                >
+                    {(percent * 100).toFixed(0)}%
+                </text>
+            );
+        }
+
+        const radius = outerRadius + cfg.labelLineLength;
         const x = cx + radius * Math.cos(-midAngle * RADIAN);
         const y = cy + radius * Math.sin(-midAngle * RADIAN);
         const displayName = String(name ?? "");
+        const labelText = formatLabel(cfg.labelFormat, displayName, value as number, percent * 100);
 
         return (
             <text
                 x={x}
                 y={y}
-                fill={chartConfig.axisStroke}
+                fill={cfg.tooltip.textColor}
                 textAnchor={x > cx ? "start" : "end"}
                 dominantBaseline="central"
-                fontSize={chartConfig.tickFontSize}
-                fontFamily={chartConfig.fontFamily}
+                fontSize={cfg.tooltip.fontSize}
+                fontFamily={cfg.tooltip.fontFamily}
             >
-                {displayName.length > 12 ? `${displayName.slice(0, 11)}…` : displayName} ({(percent * 100).toFixed(0)}%)
+                {labelText.length > 20 ? `${labelText.slice(0, 19)}…` : labelText}
             </text>
         );
     };
 
+    const isDonut = cfg.innerRadius > 0;
+
     return (
         <ResponsiveContainer width="100%" height="100%">
-            <RechartsPieChart margin={{ top: 20, right: 80, left: 80, bottom: 20 }}>
+            <RechartsPieChart margin={cfg.padding}>
                 <Pie
-                    data={chartData}
+                    data={processedData}
                     dataKey="value"
                     nameKey="name"
                     cx="50%"
                     cy="50%"
-                    innerRadius={donut ? "50%" : 0}
-                    outerRadius="70%"
-                    paddingAngle={2}
-                    label={showLabels ? renderLabel : undefined}
-                    labelLine={showLabels}
-                    animationDuration={chartConfig.animationDuration}
+                    innerRadius={`${cfg.innerRadius * 100}%`}
+                    outerRadius={`${cfg.outerRadius * 100}%`}
+                    startAngle={cfg.startAngle}
+                    endAngle={cfg.endAngle}
+                    paddingAngle={cfg.padAngle}
+                    cornerRadius={cfg.cornerRadius}
+                    label={cfg.showLabels ? renderLabel : undefined}
+                    labelLine={cfg.showLabels && cfg.showLabelLines && cfg.labelPosition === "outside"}
+                    animationDuration={cfg.animationDuration}
                 >
-                    {chartData.map((_, index) => (
-                        <Cell key={`cell-${index}`} fill={getChartColor(index)} />
+                    {processedData.map((_, index) => (
+                        <Cell 
+                            key={`cell-${index}`} 
+                            fill={cfg.colorScheme[index % cfg.colorScheme.length] ?? getChartColor(index)} 
+                        />
                     ))}
                 </Pie>
-                <Tooltip
-                    formatter={(value, _name, props) => {
-                        const payload = props.payload as { percentage?: number };
-                        const pct = payload?.percentage ?? 0;
-                        return [`${formatValue(value as number)} (${pct.toFixed(1)}%)`, ""];
-                    }}
-                    contentStyle={{
-                        backgroundColor: chartConfig.tooltipBackground,
-                        border: `1px solid ${chartConfig.tooltipBorder}`,
-                        borderRadius: 4,
-                        fontSize: chartConfig.fontSize,
-                        fontFamily: chartConfig.fontFamily,
-                    }}
-                />
-                <Legend
-                    layout="vertical"
-                    align="right"
-                    verticalAlign="middle"
-                    wrapperStyle={{
-                        fontSize: chartConfig.fontSize,
-                        fontFamily: chartConfig.fontFamily,
-                    }}
-                />
+                {isDonut && cfg.centerLabel && (
+                    <text
+                        x="50%"
+                        y="50%"
+                        textAnchor="middle"
+                        dominantBaseline="central"
+                        fontSize={cfg.centerLabelFontSize}
+                        fill={cfg.centerLabelFontColor}
+                        fontFamily={cfg.tooltip.fontFamily}
+                    >
+                        {cfg.centerLabel}
+                    </text>
+                )}
+                {cfg.tooltip.enabled && (
+                    <Tooltip
+                        formatter={(value, _name, props) => {
+                            const payload = props.payload as { percentage?: number };
+                            const pct = payload?.percentage ?? 0;
+                            if (cfg.tooltip.showPercentage) {
+                                return [`${formatValue(value as number)} (${pct.toFixed(1)}%)`, ""];
+                            }
+                            return [formatValue(value as number), ""];
+                        }}
+                        contentStyle={{
+                            backgroundColor: cfg.tooltip.backgroundColor,
+                            border: `1px solid ${cfg.tooltip.borderColor}`,
+                            borderRadius: 4,
+                            fontSize: cfg.tooltip.fontSize,
+                            fontFamily: cfg.tooltip.fontFamily,
+                            color: cfg.tooltip.textColor,
+                        }}
+                    />
+                )}
+                {cfg.legend.show && (
+                    <Legend
+                        layout={cfg.legend.position === "left" || cfg.legend.position === "right" ? "vertical" : "horizontal"}
+                        align={cfg.legend.position === "left" ? "left" : cfg.legend.position === "right" ? "right" : "center"}
+                        verticalAlign={cfg.legend.position === "top" ? "top" : cfg.legend.position === "bottom" ? "bottom" : "middle"}
+                        wrapperStyle={{
+                            fontSize: cfg.legend.fontSize,
+                            fontFamily: cfg.legend.fontFamily,
+                        }}
+                    />
+                )}
             </RechartsPieChart>
         </ResponsiveContainer>
     );
