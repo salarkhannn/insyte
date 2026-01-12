@@ -1,22 +1,31 @@
 import { useAppStore } from "../../stores/appStore";
 import { cn } from "../../utils";
 import { FieldsPanel } from "../data/FieldsPanel";
-import { VisualizationPanel } from "../data/VisualizationPanel";
+import { ConfigPanel } from "../data/ConfigPanel";
 
 export function Sidebar() {
     const { sidebarCollapsed } = useAppStore();
 
     return (
-        <aside
-            className={cn(
-                "bg-sidebar border-r border-border flex flex-col shrink-0 transition-[width] duration-150 overflow-hidden",
-                sidebarCollapsed ? "w-0" : "w-55"
-            )}
-        >
-            <div className="flex-1 overflow-y-auto scrollbar-thin">
-                <FieldsPanel />
-                <VisualizationPanel />
-            </div>
-        </aside>
+        <div className={cn(
+            "flex shrink-0 transition-all duration-150",
+            sidebarCollapsed ? "w-0 overflow-hidden" : "w-auto"
+        )}>
+            <aside
+                className="w-56 bg-neutral-50 border-r border-neutral-300 flex flex-col overflow-hidden shadow-sm"
+            >
+                <div className="flex-1 overflow-y-auto scrollbar-thin">
+                    <FieldsPanel />
+                </div>
+            </aside>
+
+            <aside
+                className="w-64 bg-white border-r border-neutral-300 flex flex-col overflow-hidden"
+            >
+                <div className="flex-1 overflow-y-auto scrollbar-thin">
+                    <ConfigPanel />
+                </div>
+            </aside>
+        </div>
     );
 }

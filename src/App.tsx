@@ -1,7 +1,7 @@
 import { AppShell } from "./components/layout";
 
 function App() {
-  return <AppShell />
+  return <AppShell />;
 }
 
 export default App;

@@ -5,7 +5,7 @@ export interface Column {
 }
 
 export interface VisualizationSpec {
-    chartType: "bar" | "line" | "area" | "pie" | "scatter" | "histogram";
+    chartType: "bar" | "line" | "area" | "pie" | "scatter";
     xField: string;
     yField: string;
     aggregation: "sum" | "avg" | "count" | "max" | "min";
@@ -64,9 +64,66 @@ export interface Dataset {
     color?: string;
 }
 
+// ============================================================================
+// ENHANCED METADATA WITH REDUCTION FEEDBACK
+// ============================================================================
+
 export interface ChartMetadata {
     title: string;
     xLabel: string;
     yLabel: string;
     totalRecords: number;
+
+    // === REDUCTION FEEDBACK (for user transparency) ===
+    /** Whether any data reduction was applied */
+    reduced?: boolean;
+    /** Primary reason: "auto-aggregation" | "sampling" | "top-n" | "none" */
+    reductionReason?: ReductionReason;
+    /** Original row count before transformations */
+    originalRowEstimate?: number;
+    /** Actual number of points returned */
+    returnedPoints?: number;
+    /** Sampling ratio if sampling was applied (0.0-1.0) */
+    sampleRatio?: number;
+    /** Top-N value if Top-N was applied */
+    topNValue?: number;
+    /** Human-readable warning for UI display */
+    warningMessage?: string;
+}
+
+/** Reason for data reduction - used for UI feedback */
+export type ReductionReason =
+    | "auto-aggregation"
+    | "sampling"
+    | "top-n"
+    | "date-binning"
+    | "combined"
+    | "none";
+
+// ============================================================================
+// TABLE DATA WITH PAGINATION
+// ============================================================================
+
+export interface TableData {
+    rows: unknown[][];
+    totalRows: number;
+    page: number;
+    pageSize: number;
+    totalPages: number;
+    warning?: string;
+}
+
+// ============================================================================
+// PROGRESSIVE DISCLOSURE CONTEXT
+// ============================================================================
+
+export interface ZoomContext {
+    /** Current zoom level (0.0 = full view, 1.0 = maximum detail) */
+    zoomLevel: number;
+    /** Visible range start for numeric/date fields */
+    rangeStart?: number;
+    /** Visible range end for numeric/date fields */
+    rangeEnd?: number;
+    /** Selected categories for filtering */
+    selectedCategories?: string[];
 }

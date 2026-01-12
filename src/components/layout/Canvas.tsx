@@ -1,7 +1,8 @@
 import { useAppStore } from "../../stores/appStore";
 import { QueryInput } from "../ai/QueryInput";
 import { TableView } from "../data/TableView";
-import { Upload } from "lucide-react";
+import { ChartContainer } from "../visualization/ChartContainer";
+import { Upload, BarChart3 } from "lucide-react";
 
 function EmptyState() {
     return (
@@ -15,31 +16,22 @@ function EmptyState() {
     );
 }
 
-function ChartPlaceholder() {
-    const { currentVisualization } = useAppStore();
-
+function ChartEmptyState() {
     return (
         <div className="flex-1 flex items-center justify-center p-4">
-            <div className="bg-surface border border-border rounded-sm w-full max-w-3xl h-80 flex flex-col items-center justify-center">
-                {currentVisualization ? (
-                    <>
-                        <span className="text-text-secondary text-sm mb-1">
-                            {currentVisualization.title}
-                        </span>
-                        <span className="text-text-disabled text-xs">
-                            {currentVisualization.chartType} chart
-                        </span>
-                    </>
-                ) : (
-                    <span className="text-text-disabled text-sm">Visualization</span>
-                )}
+            <div className="bg-surface border border-border rounded-sm w-full max-w-2xl h-72 flex flex-col items-center justify-center gap-3">
+                <BarChart3 size={32} strokeWidth={1.5} className="text-text-disabled" />
+                <p className="text-sm text-text-secondary">No visualization</p>
+                <p className="text-xs text-text-muted max-w-xs text-center">
+                    Ask a question about your data to generate a chart
+                </p>
             </div>
         </div>
     );
 }
 
 export function Canvas() {
-    const { dataLoaded, activeView } = useAppStore();
+    const { dataLoaded, activeView, currentVisualization } = useAppStore();
 
     return (
         <main className="flex-1 flex flex-col overflow-hidden">
@@ -49,8 +41,12 @@ export function Canvas() {
                 <div className="flex-1 p-3 min-h-0">
                     <TableView />
                 </div>
+            ) : currentVisualization ? (
+                <div className="flex-1 p-3 min-h-0">
+                    <ChartContainer spec={currentVisualization} />
+                </div>
             ) : (
-                <ChartPlaceholder />
+                <ChartEmptyState />
             )}
             {dataLoaded && (
                 <div className="p-3 pt-0 shrink-0">

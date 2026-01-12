@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { VisualizationSpec, ChartData } from "../types";
+import type { VisualizationSpec, ChartData, TableData, FilterSpec, ReductionReason } from "../types";
 
 interface BackendVisualizationSpec {
     chart_type: "bar" | "line" | "area" | "pie" | "scatter";
@@ -29,7 +29,24 @@ interface BackendChartData {
         x_label: string;
         y_label: string;
         total_records: number;
+        // === REDUCTION FEEDBACK ===
+        reduced?: boolean;
+        reduction_reason?: string;
+        original_row_estimate?: number;
+        returned_points?: number;
+        sample_ratio?: number | null;
+        top_n_value?: number | null;
+        warning_message?: string | null;
     };
+}
+
+interface BackendTableData {
+    rows: unknown[][];
+    total_rows: number;
+    page: number;
+    page_size: number;
+    total_pages: number;
+    warning: string | null;
 }
 
 interface BackendSettings {
@@ -84,6 +101,10 @@ function transformVisualizationSpecToBackend(spec: VisualizationSpec): BackendVi
     };
 }
 
+/**
+ * Transform backend chart data to frontend format.
+ * Includes reduction metadata for UI feedback.
+ */
 function transformChartData(data: BackendChartData): ChartData {
     return {
         labels: data.labels,
@@ -97,7 +118,29 @@ function transformChartData(data: BackendChartData): ChartData {
             xLabel: data.metadata.x_label,
             yLabel: data.metadata.y_label,
             totalRecords: data.metadata.total_records,
+            // === REDUCTION FEEDBACK ===
+            reduced: data.metadata.reduced ?? false,
+            reductionReason: (data.metadata.reduction_reason as ReductionReason) ?? "none",
+            originalRowEstimate: data.metadata.original_row_estimate ?? data.metadata.total_records,
+            returnedPoints: data.metadata.returned_points ?? 0,
+            sampleRatio: data.metadata.sample_ratio ?? undefined,
+            topNValue: data.metadata.top_n_value ?? undefined,
+            warningMessage: data.metadata.warning_message ?? undefined,
         },
+    };
+}
+
+/**
+ * Transform backend table data to frontend format.
+ */
+function transformTableData(data: BackendTableData): TableData {
+    return {
+        rows: data.rows,
+        totalRows: data.total_rows,
+        page: data.page,
+        pageSize: data.page_size,
+        totalPages: data.total_pages,
+        warning: data.warning ?? undefined,
     };
 }
 
@@ -126,9 +169,70 @@ export async function processAiQuery(query: string): Promise<VisualizationSpec> 
     return transformVisualizationSpec(spec);
 }
 
+/**
+ * Execute a visualization query with full safety hardening.
+ * Returns chart data with reduction metadata for UI feedback.
+ */
 export async function executeVisualizationQuery(spec: VisualizationSpec): Promise<ChartData> {
     const backendSpec = transformVisualizationSpecToBackend(spec);
     const data = await invoke<BackendChartData>("execute_visualization_query", { spec: backendSpec });
+    return transformChartData(data);
+}
+
+/**
+ * Execute a scatter plot query with deterministic sampling.
+ * Use this for scatter plots to avoid memory issues with large datasets.
+ */
+export async function executeScatterQuery(spec: VisualizationSpec): Promise<ChartData> {
+    const backendSpec = transformVisualizationSpecToBackend(spec);
+    const data = await invoke<BackendChartData>("execute_scatter_query", { spec: backendSpec });
+    return transformChartData(data);
+}
+
+/**
+ * Execute a table query with mandatory pagination.
+ * Tables never load all rows at once - this is a hard safety requirement.
+ */
+export async function executeTableQuery(
+    columns: string[],
+    page: number,
+    pageSize: number,
+    sortColumn?: string,
+    sortDesc?: boolean,
+    filters?: FilterSpec[]
+): Promise<TableData> {
+    const data = await invoke<BackendTableData>("execute_table_query", {
+        columns,
+        page,
+        pageSize: Math.min(pageSize, 1000), // Safety: cap at 1000
+        sortColumn: sortColumn ?? null,
+        sortDesc: sortDesc ?? false,
+        filters: filters?.map(f => ({
+            column: f.column,
+            operator: f.operator,
+            value: f.value,
+        })) ?? [],
+    });
+    return transformTableData(data);
+}
+
+/**
+ * Execute a query with zoom-aware progressive disclosure.
+ * Wide view returns fewer points; zooming in reveals more detail.
+ */
+export async function executeProgressiveQuery(
+    spec: VisualizationSpec,
+    zoomLevel: number,
+    rangeStart?: number,
+    rangeEnd?: number
+): Promise<ChartData> {
+    const backendSpec = transformVisualizationSpecToBackend(spec);
+    const data = await invoke<BackendChartData>("execute_progressive_query", {
+        spec: backendSpec,
+        zoomLevel: Math.max(0, Math.min(1, zoomLevel)),
+        rangeStart: rangeStart ?? null,
+        rangeEnd: rangeEnd ?? null,
+    });
     return transformChartData(data);
 }
 
