@@ -12,12 +12,6 @@ export {
     pieChartDefaults,
     scatterChartDefaults,
     getDefaultConfig,
-    getBarDefaults,
-    getLineDefaults,
-    getAreaDefaults,
-    getPieDefaults,
-    getScatterDefaults,
-    mergeWithDefaults,
 } from "./chartDefaults";
 export {
     chartPropertyMap,
@@ -29,5 +23,4 @@ export {
     getPropertiesForChartType,
     getPropertyGroups,
     getPropertiesByGroup,
-    filterVisibleProperties,
 } from "./chartPropertyMeta";

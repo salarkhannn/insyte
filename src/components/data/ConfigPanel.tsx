@@ -18,7 +18,6 @@ import { useChartConfigStore } from "../../stores/chartConfigStore";
 import {
     getPropertyGroups,
     getPropertiesByGroup,
-    filterVisibleProperties,
 } from "../visualization/charts/chartPropertyMeta";
 import { cn } from "../../utils";
 import type { VisualizationSpec, Column, ChartType } from "../../types";
@@ -61,9 +60,11 @@ interface SelectProps {
 function Select({ label, value, options, onChange, placeholder = "Select...", disabled }: SelectProps) {
     return (
         <div className="flex flex-col gap-1.5">
-            <label className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">
-                {label}
-            </label>
+            {label && (
+                <label className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">
+                    {label}
+                </label>
+            )}
             <div className="relative">
                 <select
                     value={value ?? ""}
@@ -123,8 +124,9 @@ export function ConfigPanel() {
         loadFromSpec,
     } = useVizBuilderStore();
 
-    const chartConfig = useChartConfigStore();
-    const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(["Appearance"]));
+    const chartConfig = useChartConfigStore((state) => state.config);
+    const chartConfigStore = useChartConfigStore();
+    const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(["Layout", "Style"]));
 
     useEffect(() => {
         if (currentVisualization) {
@@ -134,10 +136,10 @@ export function ConfigPanel() {
 
     // Sync chart type with config store
     useEffect(() => {
-        if (chartType && chartType !== chartConfig.config.type) {
-            chartConfig.setChartType(chartType as ChartType);
+        if (chartType && chartType !== chartConfig.type) {
+            chartConfigStore.setChartType(chartType as ChartType);
         }
-    }, [chartType, chartConfig]);
+    }, [chartType, chartConfig.type, chartConfigStore]);
 
     const { numeric, categorical, all } = getFieldsByType(columns);
 
@@ -165,15 +167,10 @@ export function ConfigPanel() {
 
     // Get chart-type-specific property groups
     const propertyGroups = chartType ? getPropertyGroups(chartType as ChartType) : [];
-    
-    // Filter to show only relevant groups for this sidebar (exclude Data which is handled by Field Mapping above)
-    const relevantGroups = propertyGroups.filter(g => 
-        !["Data"].includes(g)
-    );
 
     const getConfigValue = (key: string): unknown => {
         const parts = key.split(".");
-        let value: unknown = chartConfig.config;
+        let value: unknown = chartConfig;
         for (const part of parts) {
             if (value && typeof value === "object") {
                 value = (value as Record<string, unknown>)[part];
@@ -185,144 +182,79 @@ export function ConfigPanel() {
     };
 
     const setConfigValue = (key: string, newValue: unknown) => {
-        const store = useChartConfigStore.getState();
         const type = chartType as ChartType;
-        
-        // Handle nested properties
-        if (key.startsWith("xAxis.")) {
-            store.setXAxis({ [key.replace("xAxis.", "")]: newValue });
-            return;
-        }
-        if (key.startsWith("yAxis.")) {
-            store.setYAxis({ [key.replace("yAxis.", "")]: newValue });
-            return;
-        }
-        if (key.startsWith("tooltip.")) {
-            store.setTooltip({ [key.replace("tooltip.", "")]: newValue });
-            return;
-        }
+
+        // Handle legend properties
         if (key.startsWith("legend.")) {
-            store.setLegend({ [key.replace("legend.", "")]: newValue });
+            const legendKey = key.replace("legend.", "");
+            chartConfigStore.setLegend({ [legendKey]: newValue });
             return;
         }
 
         // Bar chart properties
         if (type === "bar") {
-            const barSetters: Record<string, (v: unknown) => void> = {
-                orientation: (v) => store.setBarOrientation(v as "vertical" | "horizontal"),
-                stacked: (v) => store.setBarStacked(v as boolean),
-                grouped: (v) => store.setBarGrouped(v as boolean),
-                barWidth: (v) => store.setBarWidth(v as number | "auto"),
-                maxBarWidth: (v) => store.setBarMaxWidth(v as number),
-                barSpacing: (v) => store.setBarSpacing(v as number),
-                barCategoryGap: (v) => store.setBarCategoryGap(v as number),
-                sortBy: (v) => store.setBarSortBy(v as "x" | "y" | "none"),
-                sortOrder: (v) => store.setBarSortOrder(v as "asc" | "desc" | "none"),
-                showValueLabels: (v) => store.setBarShowValueLabels(v as boolean),
-                valueLabelPosition: (v) => store.setBarValueLabelPosition(v as "top" | "center" | "bottom"),
-                valueLabelFontSize: (v) => store.setBarValueLabelFontSize(v as number),
-                valueLabelFontColor: (v) => store.setBarValueLabelFontColor(v as string),
-                highlightOnHover: (v) => store.setBarHighlightOnHover(v as boolean),
-                selectedBarIndex: (v) => store.setBarSelectedIndex(v as number | null),
-                selectedCategory: (v) => store.setBarSelectedCategory(v as string | null),
+            const setters: Record<string, () => void> = {
+                orientation: () => chartConfigStore.setBarOrientation(newValue as "vertical" | "horizontal"),
+                stacked: () => chartConfigStore.setBarStacked(newValue as boolean),
+                showValueLabels: () => chartConfigStore.setBarShowValueLabels(newValue as boolean),
+                barRadius: () => chartConfigStore.setBarRadius(newValue as number),
             };
-            if (barSetters[key]) { barSetters[key](newValue); return; }
+            if (setters[key]) { setters[key](); return; }
         }
 
         // Line chart properties
         if (type === "line") {
-            const lineSetters: Record<string, (v: unknown) => void> = {
-                curveType: (v) => store.setLineCurveType(v as "linear" | "step" | "stepAfter" | "stepBefore" | "smooth" | "monotone"),
-                strokeWidth: (v) => store.setLineStrokeWidth(v as number),
-                strokeStyle: (v) => store.setLineStrokeStyle(v as "solid" | "dashed" | "dotted"),
-                showMarkers: (v) => store.setLineShowMarkers(v as boolean),
-                markerShape: (v) => store.setLineMarkerShape(v as "circle" | "square" | "triangle" | "diamond" | "cross" | "star"),
-                markerSize: (v) => store.setLineMarkerSize(v as number),
-                areaFill: (v) => store.setLineAreaFill(v as boolean),
-                areaFillOpacity: (v) => store.setLineAreaFillOpacity(v as number),
-                connectNulls: (v) => store.setLineConnectNulls(v as boolean),
-                showMinMax: (v) => store.setLineShowMinMax(v as boolean),
-                zoomable: (v) => store.setLineZoomable(v as boolean),
+            const setters: Record<string, () => void> = {
+                curveType: () => chartConfigStore.setLineCurveType(newValue as "linear" | "monotone" | "step"),
+                strokeWidth: () => chartConfigStore.setLineStrokeWidth(newValue as number),
+                showMarkers: () => chartConfigStore.setLineShowMarkers(newValue as boolean),
+                markerSize: () => chartConfigStore.setLineMarkerSize(newValue as number),
+                connectNulls: () => chartConfigStore.setLineConnectNulls(newValue as boolean),
             };
-            if (lineSetters[key]) { lineSetters[key](newValue); return; }
+            if (setters[key]) { setters[key](); return; }
         }
 
         // Area chart properties
         if (type === "area") {
-            const areaSetters: Record<string, (v: unknown) => void> = {
-                curveType: (v) => store.setAreaCurveType(v as "linear" | "step" | "stepAfter" | "stepBefore" | "smooth" | "monotone"),
-                stacked: (v) => store.setAreaStacked(v as boolean),
-                stackOffset: (v) => store.setAreaStackOffset(v as "none" | "expand" | "silhouette" | "wiggle"),
-                fillOpacity: (v) => store.setAreaFillOpacity(v as number),
-                gradientFill: (v) => store.setAreaGradientFill(v as boolean),
-                strokeWidth: (v) => store.setAreaStrokeWidth(v as number),
-                showLineBorder: (v) => store.setAreaShowLineBorder(v as boolean),
-                showMarkers: (v) => store.setAreaShowMarkers(v as boolean),
-                baselineValue: (v) => store.setAreaBaselineValue(v as number),
-                zoomable: (v) => store.setAreaZoomable(v as boolean),
+            const setters: Record<string, () => void> = {
+                curveType: () => chartConfigStore.setAreaCurveType(newValue as "linear" | "monotone" | "step"),
+                stacked: () => chartConfigStore.setAreaStacked(newValue as boolean),
+                fillOpacity: () => chartConfigStore.setAreaFillOpacity(newValue as number),
+                showLine: () => chartConfigStore.setAreaShowLine(newValue as boolean),
+                strokeWidth: () => chartConfigStore.setAreaStrokeWidth(newValue as number),
             };
-            if (areaSetters[key]) { areaSetters[key](newValue); return; }
+            if (setters[key]) { setters[key](); return; }
         }
 
         // Pie chart properties
         if (type === "pie") {
-            const pieSetters: Record<string, (v: unknown) => void> = {
-                innerRadius: (v) => store.setPieInnerRadius(v as number),
-                outerRadius: (v) => store.setPieOuterRadius(v as number),
-                startAngle: (v) => store.setPieStartAngle(v as number),
-                endAngle: (v) => store.setPieEndAngle(v as number),
-                padAngle: (v) => store.setPiePadAngle(v as number),
-                cornerRadius: (v) => store.setPieCornerRadius(v as number),
-                showLabels: (v) => store.setPieShowLabels(v as boolean),
-                labelFormat: (v) => store.setPieLabelFormat(v as string),
-                labelPosition: (v) => store.setPieLabelPosition(v as "inside" | "outside" | "center"),
-                maxSlices: (v) => store.setPieMaxSlices(v as number),
-                otherSliceLabel: (v) => store.setPieOtherSliceLabel(v as string),
-                centerLabel: (v) => store.setPieCenterLabel(v as string),
+            const setters: Record<string, () => void> = {
+                innerRadius: () => chartConfigStore.setPieInnerRadius(newValue as number),
+                showLabels: () => chartConfigStore.setPieShowLabels(newValue as boolean),
+                labelType: () => chartConfigStore.setPieLabelType(newValue as "name" | "value" | "percent"),
             };
-            if (pieSetters[key]) { pieSetters[key](newValue); return; }
+            if (setters[key]) { setters[key](); return; }
         }
 
         // Scatter chart properties
         if (type === "scatter") {
-            const scatterSetters: Record<string, (v: unknown) => void> = {
-                dataFieldSize: (v) => store.setScatterDataFieldSize(v as string | null),
-                dataFieldColor: (v) => store.setScatterDataFieldColor(v as string | null),
-                pointSize: (v) => store.setScatterPointSize(v as number),
-                minPointSize: (v) => store.setScatterMinPointSize(v as number),
-                maxPointSize: (v) => store.setScatterMaxPointSize(v as number),
-                pointShape: (v) => store.setScatterPointShape(v as "circle" | "square" | "triangle" | "diamond" | "cross" | "star"),
-                pointOpacity: (v) => store.setScatterPointOpacity(v as number),
-                showTrendLine: (v) => store.setScatterShowTrendLine(v as boolean),
-                trendLineType: (v) => store.setScatterTrendLineType(v as "none" | "linear" | "polynomial" | "exponential" | "logarithmic" | "loess"),
-                highlightOutliers: (v) => store.setScatterHighlightOutliers(v as boolean),
-                outlierThreshold: (v) => store.setScatterOutlierThreshold(v as number),
-                jitter: (v) => store.setScatterJitter(v as number),
-                showQuadrants: (v) => store.setScatterShowQuadrants(v as boolean),
-                zoomable: (v) => store.setScatterZoomable(v as boolean),
+            const setters: Record<string, () => void> = {
+                pointSize: () => chartConfigStore.setScatterPointSize(newValue as number),
+                pointOpacity: () => chartConfigStore.setScatterPointOpacity(newValue as number),
             };
-            if (scatterSetters[key]) { scatterSetters[key](newValue); return; }
+            if (setters[key]) { setters[key](); return; }
         }
-
-        // Common properties
-        const commonSetters: Record<string, (v: unknown) => void> = {
-            title: (v) => store.setTitle(v as string),
-            animationDuration: (v) => store.setAnimationDuration(v as number),
-            backgroundColor: (v) => store.setBackgroundColor(v as string),
-            maxPoints: (v) => store.setMaxPoints(v as number),
-        };
-        if (commonSetters[key]) { commonSetters[key](newValue); }
     };
 
-    const renderPropertyControl = (prop: { 
-        key: string; 
-        label: string; 
-        type: string; 
-        options?: { value: string; label: string }[]; 
-        min?: number; 
-        max?: number; 
-        step?: number; 
-        default: unknown 
+    const renderPropertyControl = (prop: {
+        key: string;
+        label: string;
+        type: string;
+        options?: { value: string; label: string }[];
+        min?: number;
+        max?: number;
+        step?: number;
+        default: unknown;
     }) => {
         const value = getConfigValue(prop.key);
         const id = `config-${prop.key}`;
@@ -330,7 +262,7 @@ export function ConfigPanel() {
         switch (prop.type) {
             case "boolean":
                 return (
-                    <label key={prop.key} className="flex items-center justify-between py-1 cursor-pointer">
+                    <label key={prop.key} className="flex items-center justify-between py-1.5 cursor-pointer">
                         <span className="text-xs text-neutral-700">{prop.label}</span>
                         <input
                             type="checkbox"
@@ -342,14 +274,13 @@ export function ConfigPanel() {
                 );
 
             case "number":
-            case "range":
                 const numValue = typeof value === "number" ? value : prop.default as number;
                 return (
-                    <div key={prop.key} className="py-1">
+                    <div key={prop.key} className="py-1.5">
                         <div className="flex items-center justify-between mb-1">
                             <label htmlFor={id} className="text-xs text-neutral-700">{prop.label}</label>
                             <span className="text-[10px] text-neutral-500 font-mono">
-                                {prop.step && prop.step < 1 ? numValue.toFixed(2) : numValue}
+                                {prop.step && prop.step < 1 ? numValue.toFixed(1) : numValue}
                             </span>
                         </div>
                         <input
@@ -365,10 +296,9 @@ export function ConfigPanel() {
                     </div>
                 );
 
-            case "select":
             case "enum":
                 return (
-                    <div key={prop.key} className="py-1">
+                    <div key={prop.key} className="py-1.5">
                         <label htmlFor={id} className="block text-xs text-neutral-700 mb-1">{prop.label}</label>
                         <div className="relative">
                             <select
@@ -386,35 +316,6 @@ export function ConfigPanel() {
                     </div>
                 );
 
-            case "color":
-                return (
-                    <div key={prop.key} className="flex items-center justify-between py-1">
-                        <label htmlFor={id} className="text-xs text-neutral-700">{prop.label}</label>
-                        <input
-                            id={id}
-                            type="color"
-                            value={value as string ?? prop.default as string}
-                            onChange={(e) => setConfigValue(prop.key, e.target.value)}
-                            className="w-7 h-7 rounded border border-neutral-300 cursor-pointer"
-                        />
-                    </div>
-                );
-
-            case "text":
-            case "string":
-                return (
-                    <div key={prop.key} className="py-1">
-                        <label htmlFor={id} className="block text-xs text-neutral-700 mb-1">{prop.label}</label>
-                        <input
-                            id={id}
-                            type="text"
-                            value={value as string ?? prop.default as string}
-                            onChange={(e) => setConfigValue(prop.key, e.target.value)}
-                            className="w-full h-7 px-2 text-xs bg-white border border-neutral-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500"
-                        />
-                    </div>
-                );
-
             default:
                 return null;
         }
@@ -423,6 +324,7 @@ export function ConfigPanel() {
     return (
         <div className="flex flex-col h-full bg-white overflow-hidden">
             <div className="flex-1 overflow-y-auto">
+                {/* Chart Type Selection */}
                 <section className="border-b border-neutral-200">
                     <header className="px-3 py-2.5 text-[11px] font-semibold text-neutral-600 uppercase tracking-wider bg-neutral-50">
                         Chart Type
@@ -451,6 +353,7 @@ export function ConfigPanel() {
                     </div>
                 </section>
 
+                {/* Field Mapping */}
                 <section className="border-b border-neutral-200 p-3 space-y-3">
                     <header className="text-[11px] font-semibold text-neutral-600 uppercase tracking-wider -mx-3 px-3 -mt-3 pt-2.5 pb-2 bg-neutral-50 border-b border-neutral-200 mb-3">
                         Field Mapping
@@ -464,7 +367,7 @@ export function ConfigPanel() {
                             label=""
                             value={xField}
                             onChange={setXField}
-                            placeholder="Drop field here"
+                            placeholder="Select field"
                             disabled={!dataLoaded}
                             options={[
                                 ...categorical.map((c) => ({ value: c.name, label: c.name })),
@@ -477,13 +380,13 @@ export function ConfigPanel() {
                     <div className="space-y-1">
                         <div className="flex items-center gap-1.5 text-[10px] text-neutral-500 font-medium mb-1">
                             <Columns size={11} />
-                            <span>COLUMNS</span>
+                            <span>VALUES</span>
                         </div>
                         <Select
                             label=""
                             value={yField}
                             onChange={setYField}
-                            placeholder="Drop field here"
+                            placeholder="Select field"
                             disabled={!dataLoaded}
                             options={[
                                 ...numeric.map((c) => ({ value: c.name, label: c.name })),
@@ -495,6 +398,7 @@ export function ConfigPanel() {
                     </div>
                 </section>
 
+                {/* Aggregation & Sorting */}
                 <section className="border-b border-neutral-200 p-3 space-y-3">
                     <header className="text-[11px] font-semibold text-neutral-600 uppercase tracking-wider -mx-3 px-3 -mt-3 pt-2.5 pb-2 bg-neutral-50 border-b border-neutral-200 mb-3">
                         Options
@@ -527,12 +431,10 @@ export function ConfigPanel() {
                     </div>
                 </section>
 
-                {/* Chart-type-specific properties */}
-                {dataLoaded && chartType && relevantGroups.map(group => {
+                {/* Chart-specific Properties */}
+                {dataLoaded && chartType && propertyGroups.map(group => {
                     const properties = getPropertiesByGroup(chartType as ChartType, group);
-                    const visibleProps = filterVisibleProperties(properties, chartConfig.config as unknown as Record<string, unknown>);
-                    
-                    if (visibleProps.length === 0) return null;
+                    if (properties.length === 0) return null;
 
                     const isExpanded = expandedGroups.has(group);
 
@@ -546,8 +448,8 @@ export function ConfigPanel() {
                                 {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                             </button>
                             {isExpanded && (
-                                <div className="px-3 py-2 space-y-1">
-                                    {visibleProps.map(prop => renderPropertyControl(prop))}
+                                <div className="px-3 py-2">
+                                    {properties.map(prop => renderPropertyControl(prop))}
                                 </div>
                             )}
                         </section>
@@ -555,6 +457,7 @@ export function ConfigPanel() {
                 })}
             </div>
 
+            {/* Action Buttons */}
             <div className="p-3 border-t border-neutral-200 flex gap-2 bg-neutral-50">
                 <button
                     onClick={reset}

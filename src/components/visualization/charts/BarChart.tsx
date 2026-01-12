@@ -34,13 +34,14 @@ export function BarChart({ data, config }: BarChartProps) {
 
     const isHorizontal = cfg.orientation === "horizontal";
     const layout = isHorizontal ? "vertical" : "horizontal";
-    const gridDasharray = cfg.xAxis.gridLineStyle === "dashed" ? "3 3" : cfg.xAxis.gridLineStyle === "dotted" ? "1 3" : "0";
 
+    // Convert single radius number to array format for Recharts
     const getBarRadius = (): [number, number, number, number] => {
+        const r = cfg.barRadius;
         if (isHorizontal) {
-            return [0, cfg.barRadius[0], cfg.barRadius[1], 0];
+            return [0, r, r, 0]; // Right corners rounded for horizontal
         }
-        return cfg.barRadius;
+        return [r, r, 0, 0]; // Top corners rounded for vertical
     };
 
     return (
@@ -48,115 +49,61 @@ export function BarChart({ data, config }: BarChartProps) {
             <RechartsBarChart
                 data={chartData}
                 layout={layout}
-                margin={cfg.padding}
-                barGap={cfg.barSpacing}
-                barCategoryGap={cfg.barCategoryGap}
+                margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
             >
-                <CartesianGrid
-                    strokeDasharray={gridDasharray}
-                    stroke={cfg.xAxis.gridLineColor}
-                    vertical={!isHorizontal && cfg.xAxis.showGridLines}
-                    horizontal={isHorizontal ? cfg.xAxis.showGridLines : cfg.yAxis.showGridLines}
-                />
+                <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
                 {isHorizontal ? (
                     <>
                         <XAxis
                             type="number"
                             tickFormatter={formatValue}
-                            tick={{ fontSize: cfg.xAxis.labelFontSize, fill: cfg.xAxis.labelFontColor }}
-                            axisLine={cfg.xAxis.showAxisLine ? { stroke: cfg.xAxis.axisLineColor } : false}
-                            tickLine={{ stroke: cfg.xAxis.axisLineColor }}
-                            label={cfg.xAxis.title ? {
-                                value: cfg.xAxis.title,
-                                position: "insideBottom",
-                                offset: -5,
-                                fontSize: cfg.xAxis.titleFontSize,
-                                fill: cfg.xAxis.titleFontColor,
-                            } : undefined}
+                            tick={{ fontSize: 12, fill: "#666" }}
                         />
                         <YAxis
                             type="category"
                             dataKey="name"
-                            tick={{ fontSize: cfg.yAxis.labelFontSize, fill: cfg.yAxis.labelFontColor }}
-                            axisLine={cfg.yAxis.showAxisLine ? { stroke: cfg.yAxis.axisLineColor } : false}
-                            tickLine={{ stroke: cfg.yAxis.axisLineColor }}
+                            tick={{ fontSize: 12, fill: "#666" }}
                             width={100}
                             tickFormatter={(value) => truncateLabel(String(value))}
-                            label={cfg.yAxis.title ? {
-                                value: cfg.yAxis.title,
-                                angle: -90,
-                                position: "insideLeft",
-                                fontSize: cfg.yAxis.titleFontSize,
-                                fill: cfg.yAxis.titleFontColor,
-                            } : undefined}
                         />
                     </>
                 ) : (
                     <>
                         <XAxis
                             dataKey="name"
-                            tick={{ fontSize: cfg.xAxis.labelFontSize, fill: cfg.xAxis.labelFontColor }}
-                            axisLine={cfg.xAxis.showAxisLine ? { stroke: cfg.xAxis.axisLineColor } : false}
-                            tickLine={{ stroke: cfg.xAxis.axisLineColor }}
+                            tick={{ fontSize: 12, fill: "#666" }}
                             tickFormatter={(value) => truncateLabel(String(value))}
                             interval={0}
-                            angle={cfg.xAxis.labelRotation}
-                            textAnchor={cfg.xAxis.labelRotation < 0 ? "end" : "start"}
+                            angle={-45}
+                            textAnchor="end"
                             height={60}
-                            label={cfg.xAxis.title ? {
-                                value: cfg.xAxis.title,
-                                position: "insideBottom",
-                                offset: -5,
-                                fontSize: cfg.xAxis.titleFontSize,
-                                fill: cfg.xAxis.titleFontColor,
-                            } : undefined}
                         />
                         <YAxis
                             tickFormatter={formatValue}
-                            tick={{ fontSize: cfg.yAxis.labelFontSize, fill: cfg.yAxis.labelFontColor }}
-                            axisLine={cfg.yAxis.showAxisLine ? { stroke: cfg.yAxis.axisLineColor } : false}
-                            tickLine={{ stroke: cfg.yAxis.axisLineColor }}
-                            domain={[
-                                cfg.yAxis.min === "auto" ? "auto" : cfg.yAxis.min,
-                                cfg.yAxis.max === "auto" ? "auto" : cfg.yAxis.max,
-                            ]}
-                            label={cfg.yAxis.title ? {
-                                value: cfg.yAxis.title,
-                                angle: -90,
-                                position: "insideLeft",
-                                fontSize: cfg.yAxis.titleFontSize,
-                                fill: cfg.yAxis.titleFontColor,
-                            } : undefined}
+                            tick={{ fontSize: 12, fill: "#666" }}
                         />
                     </>
                 )}
                 {cfg.tooltip.enabled && (
                     <Tooltip
-                        cursor={cfg.highlightOnHover ? { fill: "rgba(0, 0, 0, 0.05)" } : false}
+                        cursor={{ fill: "rgba(0, 0, 0, 0.05)" }}
                         formatter={(value) => [formatValue(value as number), ""]}
                         contentStyle={{
-                            backgroundColor: cfg.tooltip.backgroundColor,
-                            border: `1px solid ${cfg.tooltip.borderColor}`,
+                            backgroundColor: "#fff",
+                            border: "1px solid #ccc",
                             borderRadius: 4,
-                            fontSize: cfg.tooltip.fontSize,
-                            fontFamily: cfg.tooltip.fontFamily,
-                            color: cfg.tooltip.textColor,
+                            fontSize: 12,
                         }}
                     />
                 )}
-                {cfg.legend.show && data.datasets.length > 1 && (
+                {cfg.legend.show && cfg.legend.position !== "none" && data.datasets.length > 1 && (
                     <Legend
                         verticalAlign={cfg.legend.position === "top" ? "top" : cfg.legend.position === "bottom" ? "bottom" : "middle"}
                         align={cfg.legend.position === "left" ? "left" : cfg.legend.position === "right" ? "right" : "center"}
-                        wrapperStyle={{
-                            fontSize: cfg.legend.fontSize,
-                            fontFamily: cfg.legend.fontFamily,
-                        }}
                     />
                 )}
                 {data.datasets.map((dataset, datasetIndex) => {
                     const barColor = dataset.color ?? cfg.colorScheme[datasetIndex % cfg.colorScheme.length] ?? getChartColor(datasetIndex);
-                    const maxWidth = typeof cfg.barWidth === "number" ? cfg.barWidth : cfg.maxBarWidth;
                     
                     return (
                         <Bar
@@ -166,16 +113,12 @@ export function BarChart({ data, config }: BarChartProps) {
                             stackId={cfg.stacked ? "stack" : undefined}
                             animationDuration={cfg.animationDuration}
                             radius={getBarRadius()}
-                            maxBarSize={maxWidth}
                         >
                             {cfg.showValueLabels && (
                                 <LabelList
                                     dataKey={dataset.label}
-                                    position={cfg.valueLabelPosition}
-                                    style={{
-                                        fontSize: cfg.valueLabelFontSize,
-                                        fill: cfg.valueLabelFontColor,
-                                    }}
+                                    position={isHorizontal ? "right" : "top"}
+                                    style={{ fontSize: 10, fill: "#666" }}
                                 />
                             )}
                         </Bar>
