@@ -1,8 +1,7 @@
 import { useAppStore } from "../../stores/appStore";
-import { QueryInput } from "../ai/QueryInput";
 import { TableView } from "../data/TableView";
 import { ChartContainer } from "../visualization/ChartContainer";
-import { Upload, BarChart3 } from "lucide-react";
+import { Upload, BarChart3, Sparkles } from "lucide-react";
 
 function EmptyState() {
     return (
@@ -23,8 +22,12 @@ function ChartEmptyState() {
                 <BarChart3 size={32} strokeWidth={1.5} className="text-text-disabled" />
                 <p className="text-sm text-text-secondary">No visualization</p>
                 <p className="text-xs text-text-muted max-w-xs text-center">
-                    Ask a question about your data to generate a chart
+                    Use the AI assistant on the right or configure a chart manually
                 </p>
+                <div className="flex items-center gap-1.5 text-xs text-violet-600 mt-2">
+                    <Sparkles size={14} />
+                    <span>Press Ctrl+/ to focus AI chat</span>
+                </div>
             </div>
         </div>
     );
@@ -34,7 +37,7 @@ export function Canvas() {
     const { dataLoaded, activeView, currentVisualization } = useAppStore();
 
     return (
-        <main className="flex-1 flex flex-col overflow-hidden">
+        <main className="flex-1 flex flex-col overflow-hidden bg-neutral-100/50">
             {!dataLoaded ? (
                 <EmptyState />
             ) : activeView === "table" ? (
@@ -47,11 +50,6 @@ export function Canvas() {
                 </div>
             ) : (
                 <ChartEmptyState />
-            )}
-            {dataLoaded && (
-                <div className="p-3 pt-0 shrink-0">
-                    <QueryInput />
-                </div>
             )}
         </main>
     );

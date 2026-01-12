@@ -1,4 +1,4 @@
-import { useCallback } from "react";
+import { useCallback, useEffect } from "react";
 import {
     BarChart3,
     LineChart,
@@ -97,7 +97,7 @@ function getFieldsByType(columns: Column[]) {
 }
 
 export function ConfigPanel() {
-    const { columns, dataLoaded, setVisualization, setActiveView } = useAppStore();
+    const { columns, dataLoaded, currentVisualization, setVisualization, setActiveView } = useAppStore();
     const {
         chartType,
         xField,
@@ -113,7 +113,14 @@ export function ConfigPanel() {
         setSortOrder,
         buildSpec,
         reset,
+        loadFromSpec,
     } = useVizBuilderStore();
+
+    useEffect(() => {
+        if (currentVisualization) {
+            loadFromSpec(currentVisualization);
+        }
+    }, [currentVisualization, loadFromSpec]);
 
     const { numeric, categorical, all } = getFieldsByType(columns);
 

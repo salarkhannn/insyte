@@ -1,4 +1,4 @@
-import { Hash, Type, Calendar, ToggleLeft, Database, FileSpreadsheet } from "lucide-react";
+import { Hash, Type, Calendar, ToggleLeft, FileSpreadsheet } from "lucide-react";
 import { useAppStore } from "../../stores/appStore";
 import type { Column } from "../../types";
 
