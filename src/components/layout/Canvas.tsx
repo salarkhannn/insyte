@@ -1,52 +1,7 @@
 import { useAppStore } from "../../stores/appStore";
 import { TableView } from "../data/TableView";
 import { ChartContainer } from "../visualization/ChartContainer";
-import { Upload, BarChart3, ZoomIn, ZoomOut, Maximize2, Download } from "lucide-react";
-import { cn } from "../../utils";
-
-function CanvasToolbar() {
-    return (
-        <div className="absolute top-3 right-3 flex items-center gap-1 bg-white/90 backdrop-blur-sm border border-neutral-200 rounded-md p-1 shadow-sm">
-            <button
-                className={cn(
-                    "w-7 h-7 flex items-center justify-center rounded text-neutral-500",
-                    "hover:bg-neutral-100 hover:text-neutral-700 transition-colors"
-                )}
-                title="Zoom in"
-            >
-                <ZoomIn size={14} />
-            </button>
-            <button
-                className={cn(
-                    "w-7 h-7 flex items-center justify-center rounded text-neutral-500",
-                    "hover:bg-neutral-100 hover:text-neutral-700 transition-colors"
-                )}
-                title="Zoom out"
-            >
-                <ZoomOut size={14} />
-            </button>
-            <div className="w-px h-5 bg-neutral-200 mx-0.5" />
-            <button
-                className={cn(
-                    "w-7 h-7 flex items-center justify-center rounded text-neutral-500",
-                    "hover:bg-neutral-100 hover:text-neutral-700 transition-colors"
-                )}
-                title="Fullscreen"
-            >
-                <Maximize2 size={14} />
-            </button>
-            <button
-                className={cn(
-                    "w-7 h-7 flex items-center justify-center rounded text-neutral-500",
-                    "hover:bg-neutral-100 hover:text-neutral-700 transition-colors"
-                )}
-                title="Export"
-            >
-                <Download size={14} />
-            </button>
-        </div>
-    );
-}
+import { Upload, BarChart3 } from "lucide-react";
 
 function EmptyState() {
     return (
@@ -86,12 +41,9 @@ export function Canvas() {
                     <TableView />
                 </div>
             ) : currentVisualization ? (
-                <>
-                    <CanvasToolbar />
-                    <div className="flex-1 p-4 min-h-0">
-                        <ChartContainer spec={currentVisualization} />
-                    </div>
-                </>
+                <div className="flex-1 p-4 min-h-0">
+                    <ChartContainer spec={currentVisualization} />
+                </div>
             ) : (
                 <ChartEmptyState />
             )}
