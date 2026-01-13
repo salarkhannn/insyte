@@ -1,29 +1,118 @@
+import { useEffect } from "react";
+import { Database, Layers } from "lucide-react";
 import { useAppStore } from "../../stores/appStore";
+import { useVizBuilderStore } from "../../stores/vizBuilderStore";
+import { useChartConfigStore } from "../../stores/chartConfigStore";
 import { cn } from "../../utils";
-import { FieldsPanel } from "../data/FieldsPanel";
-import { ConfigPanel } from "../data/ConfigPanel";
+import { CollapsibleSection } from "./CollapsibleSection";
+import { DataPanel } from "../data/DataPanel";
+import { EncodingPanel } from "../data/EncodingPanel";
+import { ChartTypeSelector } from "../data/ChartTypeSelector";
+import { ChartOptionsPanel } from "../data/ChartOptionsPanel";
+import type { ChartType } from "../../types";
 
 export function Sidebar() {
-    const { sidebarCollapsed } = useAppStore();
+    const { sidebarCollapsed, columns, dataLoaded, currentVisualization, setVisualization, setActiveView } = useAppStore();
+    const {
+        chartType,
+        xField,
+        yField,
+        aggregation,
+        setChartType,
+        setXField,
+        setYField,
+        setAggregation,
+        buildSpec,
+        loadFromSpec,
+    } = useVizBuilderStore();
+    const chartConfigStore = useChartConfigStore();
+
+    useEffect(() => {
+        if (currentVisualization) {
+            loadFromSpec(currentVisualization);
+        }
+    }, [currentVisualization, loadFromSpec]);
+
+    useEffect(() => {
+        if (chartType && chartType !== chartConfigStore.config.type) {
+            chartConfigStore.setChartType(chartType as ChartType);
+        }
+    }, [chartType, chartConfigStore]);
+
+    useEffect(() => {
+        if (dataLoaded && xField && yField) {
+            const spec = buildSpec(columns);
+            if (spec) {
+                setVisualization(spec);
+                setActiveView("chart");
+            }
+        }
+    }, [dataLoaded, chartType, xField, yField, aggregation, buildSpec, columns, setVisualization, setActiveView]);
+
+    const selectedChartLabel = chartType
+        ? chartType.charAt(0).toUpperCase() + chartType.slice(1)
+        : "None";
 
     return (
-        <div className={cn(
-            "flex shrink-0 transition-all duration-100",
-            sidebarCollapsed ? "w-0 overflow-hidden" : "w-auto"
-        )}>
-            <aside
-                className="w-64 bg-neutral-50 border-r border-neutral-200 flex flex-col overflow-hidden"
-            >
+        <div
+            className={cn(
+                "flex shrink-0 transition-all duration-100",
+                sidebarCollapsed ? "w-0 overflow-hidden" : "w-72"
+            )}
+        >
+            <aside className="w-72 bg-white border-r border-neutral-200 flex flex-col overflow-hidden">
                 <div className="flex-1 overflow-y-auto scrollbar-thin">
-                    <FieldsPanel />
-                </div>
-            </aside>
+                    {/* DATA Section */}
+                    <CollapsibleSection
+                        title="Data"
+                        icon={<Database size={13} />}
+                        defaultExpanded={!dataLoaded}
+                        badge={dataLoaded ? `${columns.length} fields` : undefined}
+                    >
+                        <DataPanel />
+                    </CollapsibleSection>
 
-            <aside
-                className="w-80 bg-white border-r border-neutral-200 flex flex-col overflow-hidden"
-            >
-                <div className="flex-1 overflow-y-auto scrollbar-thin">
-                    <ConfigPanel />
+                    {/* ENCODING Section - Always Expanded */}
+                    <CollapsibleSection
+                        title="Encoding"
+                        icon={<Layers size={13} />}
+                        alwaysExpanded
+                    >
+                        <EncodingPanel
+                            columns={columns}
+                            xField={xField}
+                            yField={yField}
+                            aggregation={aggregation}
+                            onXFieldChange={setXField}
+                            onYFieldChange={setYField}
+                            onAggregationChange={setAggregation}
+                            disabled={!dataLoaded}
+                        />
+                    </CollapsibleSection>
+
+                    {/* CHART TYPE Section */}
+                    <CollapsibleSection
+                        title="Chart Type"
+                        defaultExpanded={false}
+                        badge={selectedChartLabel}
+                    >
+                        <ChartTypeSelector
+                            value={chartType}
+                            onChange={setChartType}
+                            disabled={!dataLoaded}
+                        />
+                    </CollapsibleSection>
+
+                    {/* CHART OPTIONS Section */}
+                    <CollapsibleSection
+                        title="Chart Options"
+                        defaultExpanded={false}
+                    >
+                        <ChartOptionsPanel
+                            chartType={chartType as ChartType}
+                            disabled={!dataLoaded || !chartType}
+                        />
+                    </CollapsibleSection>
                 </div>
             </aside>
         </div>

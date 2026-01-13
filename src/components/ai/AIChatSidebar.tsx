@@ -19,11 +19,18 @@ interface ChatMessage {
 export function AIChatSidebar() {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [input, setInput] = useState("");
-    const [isCollapsed, setIsCollapsed] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLTextAreaElement>(null);
 
-    const { isProcessing, setProcessing, setVisualization, setActiveView, dataLoaded } = useAppStore();
+    const { 
+        isProcessing, 
+        setProcessing, 
+        setVisualization, 
+        setActiveView, 
+        dataLoaded,
+        aiPanelCollapsed,
+        setAiPanelCollapsed,
+    } = useAppStore();
     const { addToHistory } = useQueryStore();
     const { loadFromSpec } = useVizBuilderStore();
 
@@ -35,15 +42,15 @@ export function AIChatSidebar() {
         function handleKeyDown(event: KeyboardEvent) {
             if ((event.ctrlKey || event.metaKey) && event.key === "/") {
                 event.preventDefault();
-                if (isCollapsed) {
-                    setIsCollapsed(false);
+                if (aiPanelCollapsed) {
+                    setAiPanelCollapsed(false);
                 }
                 setTimeout(() => inputRef.current?.focus(), 100);
             }
         }
         document.addEventListener("keydown", handleKeyDown);
         return () => document.removeEventListener("keydown", handleKeyDown);
-    }, [isCollapsed]);
+    }, [aiPanelCollapsed, setAiPanelCollapsed]);
 
     const generateId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
@@ -124,11 +131,11 @@ export function AIChatSidebar() {
         setMessages([]);
     };
 
-    if (isCollapsed) {
+    if (aiPanelCollapsed) {
         return (
             <div className="w-12 bg-neutral-50 border-l border-neutral-300 flex flex-col items-center py-4">
                 <button
-                    onClick={() => setIsCollapsed(false)}
+                    onClick={() => setAiPanelCollapsed(false)}
                     className="p-2.5 rounded hover:bg-neutral-200 text-neutral-600 transition-colors"
                     title="Open AI Chat (Ctrl+/)"
                 >
@@ -161,7 +168,7 @@ export function AIChatSidebar() {
                         </button>
                     )}
                     <button
-                        onClick={() => setIsCollapsed(true)}
+                        onClick={() => setAiPanelCollapsed(true)}
                         className="p-2 rounded hover:bg-neutral-200/50 text-neutral-500 transition-colors"
                         title="Collapse"
                     >

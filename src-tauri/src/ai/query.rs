@@ -78,7 +78,7 @@ fn get_model() -> String {
     std::env::var("GROQ_MODEL").unwrap_or_else(|_| {
         AppSettings::load()
             .map(|s| s.groq_model)
-            .unwrap_or_else(|_| "llama-3.3-70b-versatile".to_string())
+            .unwrap_or_else(|_| "meta-llama/llama-4-maverick-17b-128e-instruct".to_string())
     })
 }
 

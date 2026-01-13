@@ -3,8 +3,11 @@ import { Sidebar } from "./Sidebar";
 import { Canvas } from "./Canvas";
 import { StatusBar } from "./StatusBar";
 import { AIChatSidebar } from "../ai";
+import { useMenuEvents } from "../../hooks";
 
 export function AppShell() {
+    useMenuEvents();
+
     return (
         <div className="h-screen flex flex-col bg-canvas">
             <Toolbar />

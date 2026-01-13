@@ -1,6 +1,7 @@
 mod ai;
 mod data;
 mod error;
+mod menu;
 mod project;
 mod settings;
 
@@ -11,16 +12,12 @@ use data::{
     execute_progressive_query, execute_scatter_query, execute_table_query,
     execute_visualization_query,
 };
+use menu::{create_menu, handle_menu_event};
 use project::{
     add_to_recent, get_recent_projects, new_project, open_project, save_project, save_project_as,
 };
 use settings::{get_settings, set_api_key, update_settings, validate_api_key};
 use tauri::Manager;
-
-#[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
-}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -56,8 +53,13 @@ pub fn run() {
         .setup(|app| {
             let data_state = AppDataState::default();
             app.manage(data_state);
+
+            let menu = create_menu(app)?;
+            app.set_menu(menu)?;
+
             Ok(())
         })
+        .on_menu_event(handle_menu_event)
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }

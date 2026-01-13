@@ -10,6 +10,7 @@ interface AppState {
     fileSize: number;
 
     sidebarCollapsed: boolean;
+    aiPanelCollapsed: boolean;
     activeView: "table" | "chart";
     isProcessing: boolean;
     processingMessage: string | null;
@@ -25,6 +26,8 @@ interface AppState {
 
 interface AppActions {
     toggleSidebar: () => void;
+    toggleAiPanel: () => void;
+    setAiPanelCollapsed: (collapsed: boolean) => void;
     setActiveView: (view: "table" | "chart") => void;
     setProcessing: (processing: boolean, message?: string) => void;
     setDataset: (info: {
@@ -53,6 +56,7 @@ const initialState: AppState = {
     rowCount: 0,
     fileSize: 0,
     sidebarCollapsed: false,
+    aiPanelCollapsed: false,
     activeView: "table",
     isProcessing: false,
     processingMessage: null,
@@ -68,6 +72,11 @@ export const useAppStore = create<AppState & AppActions>((set) => ({
 
     toggleSidebar: () =>
         set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
+
+    toggleAiPanel: () =>
+        set((state) => ({ aiPanelCollapsed: !state.aiPanelCollapsed })),
+
+    setAiPanelCollapsed: (collapsed) => set({ aiPanelCollapsed: collapsed }),
 
     setActiveView: (view) => set({ activeView: view }),
 
