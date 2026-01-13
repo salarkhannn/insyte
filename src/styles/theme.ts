@@ -58,6 +58,14 @@ export const typography = {
 } as const;
 
 export const radius = {
-    sm: 2,
-    md: 3,
+    none: 0,
+    sm: 1,
+    md: 2,
+} as const;
+
+export const border = {
+    width: {
+        thin: 1,
+        medium: 1,
+    },
 } as const;

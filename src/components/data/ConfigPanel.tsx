@@ -58,9 +58,9 @@ interface SelectProps {
 
 function Select({ label, value, options, onChange, placeholder = "Select...", disabled }: SelectProps) {
     return (
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-2">
             {label && (
-                <label className="text-[10px] font-semibold text-neutral-600 uppercase tracking-wider">
+                <label className="text-xs font-medium text-neutral-600 uppercase tracking-wider">
                     {label}
                 </label>
             )}
@@ -70,9 +70,9 @@ function Select({ label, value, options, onChange, placeholder = "Select...", di
                     onChange={(e) => onChange(e.target.value)}
                     disabled={disabled}
                     className={cn(
-                        "w-full h-8 px-2.5 pr-7 text-xs bg-white border border-neutral-300 rounded",
-                        "appearance-none cursor-pointer font-medium text-neutral-800",
-                        "focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500",
+                        "w-full h-9 px-3 pr-8 text-xs bg-white border border-neutral-300 rounded-sm",
+                        "appearance-none cursor-pointer text-neutral-800",
+                        "focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500",
                         "hover:border-neutral-400 transition-colors",
                         "disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-neutral-50",
                         !value && "text-neutral-400"
@@ -88,8 +88,8 @@ function Select({ label, value, options, onChange, placeholder = "Select...", di
                     ))}
                 </select>
                 <ChevronDown
-                    size={13}
-                    className="absolute right-2 top-1/2 -translate-y-1/2 text-neutral-500 pointer-events-none"
+                    size={14}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-neutral-500 pointer-events-none"
                 />
             </div>
         </div>
@@ -262,7 +262,7 @@ export function ConfigPanel() {
         switch (prop.type) {
             case "boolean":
                 return (
-                    <label key={prop.key} className="flex items-center justify-between py-1.5 cursor-pointer">
+                    <label key={prop.key} className="flex items-center justify-between py-2 cursor-pointer">
                         <span className="text-xs text-neutral-700">{prop.label}</span>
                         <input
                             type="checkbox"
@@ -276,10 +276,10 @@ export function ConfigPanel() {
             case "number":
                 const numValue = typeof value === "number" ? value : prop.default as number;
                 return (
-                    <div key={prop.key} className="py-1.5">
-                        <div className="flex items-center justify-between mb-1">
+                    <div key={prop.key} className="py-2">
+                        <div className="flex items-center justify-between mb-2">
                             <label htmlFor={id} className="text-xs text-neutral-700">{prop.label}</label>
-                            <span className="text-[10px] text-neutral-500 font-mono">
+                            <span className="text-xs text-neutral-500 font-mono">
                                 {prop.step && prop.step < 1 ? numValue.toFixed(1) : numValue}
                             </span>
                         </div>
@@ -298,20 +298,20 @@ export function ConfigPanel() {
 
             case "enum":
                 return (
-                    <div key={prop.key} className="py-1.5">
-                        <label htmlFor={id} className="block text-xs text-neutral-700 mb-1">{prop.label}</label>
+                    <div key={prop.key} className="py-2">
+                        <label htmlFor={id} className="block text-xs text-neutral-700 mb-1.5">{prop.label}</label>
                         <div className="relative">
                             <select
                                 id={id}
                                 value={value as string ?? prop.default as string}
                                 onChange={(e) => setConfigValue(prop.key, e.target.value)}
-                                className="w-full h-7 px-2 pr-7 text-xs bg-white border border-neutral-300 rounded appearance-none cursor-pointer focus:outline-none focus:ring-1 focus:ring-blue-500"
+                                className="w-full h-8 px-2 pr-7 text-xs bg-white border border-neutral-300 rounded appearance-none cursor-pointer focus:outline-none focus:ring-1 focus:ring-blue-500"
                             >
                                 {prop.options?.map(opt => (
                                     <option key={opt.value} value={opt.value}>{opt.label}</option>
                                 ))}
                             </select>
-                            <ChevronDown size={12} className="absolute right-2 top-1/2 -translate-y-1/2 text-neutral-500 pointer-events-none" />
+                            <ChevronDown size={14} className="absolute right-2 top-1/2 -translate-y-1/2 text-neutral-500 pointer-events-none" />
                         </div>
                     </div>
                 );
@@ -326,10 +326,10 @@ export function ConfigPanel() {
             <div className="flex-1 overflow-y-auto">
                 {/* Chart Type Selection */}
                 <section className="border-b border-neutral-200">
-                    <header className="px-3 py-2.5 text-[11px] font-semibold text-neutral-600 uppercase tracking-wider bg-neutral-50">
+                    <header className="px-4 py-3 text-xs font-semibold text-neutral-600 uppercase tracking-wider bg-neutral-50">
                         Chart Type
                     </header>
-                    <div className="px-3 py-3 grid grid-cols-5 gap-1.5">
+                    <div className="px-4 py-4 grid grid-cols-5 gap-2">
                         {chartTypes.map(({ id, icon: Icon, label }) => (
                             <button
                                 key={id}
@@ -337,30 +337,30 @@ export function ConfigPanel() {
                                 disabled={!dataLoaded}
                                 title={label}
                                 className={cn(
-                                    "flex flex-col items-center gap-1 py-2.5 rounded border transition-all",
+                                    "flex flex-col items-center gap-2 py-3 rounded-sm border transition-colors",
                                     chartType === id
-                                        ? "bg-blue-50 text-blue-600 border-blue-400 shadow-sm"
+                                        ? "bg-blue-50 text-blue-600 border-blue-400"
                                         : "text-neutral-600 border-neutral-300 bg-white",
                                     dataLoaded
                                         ? "hover:bg-neutral-50 hover:border-neutral-400 cursor-pointer"
                                         : "opacity-40 cursor-not-allowed"
                                 )}
                             >
-                                <Icon size={16} strokeWidth={1.5} />
-                                <span className="text-[9px] font-medium">{label}</span>
+                                <Icon size={20} strokeWidth={1.5} />
+                                <span className="text-[10px] font-medium">{label}</span>
                             </button>
                         ))}
                     </div>
                 </section>
 
                 {/* Field Mapping */}
-                <section className="border-b border-neutral-200 p-3 space-y-3">
-                    <header className="text-[11px] font-semibold text-neutral-600 uppercase tracking-wider -mx-3 px-3 -mt-3 pt-2.5 pb-2 bg-neutral-50 border-b border-neutral-200 mb-3">
+                <section className="border-b border-neutral-200 p-4 space-y-4">
+                    <header className="text-xs font-semibold text-neutral-600 uppercase tracking-wider -mx-4 px-4 -mt-4 pt-3 pb-2.5 bg-neutral-50 border-b border-neutral-200 mb-4">
                         Field Mapping
                     </header>
-                    <div className="space-y-1">
-                        <div className="flex items-center gap-1.5 text-[10px] text-neutral-500 font-medium mb-1">
-                            <Rows size={11} />
+                    <div className="space-y-3">
+                        <div className="flex items-center gap-2.5 text-xs text-neutral-500 font-medium">
+                            <Rows size={14} />
                             <span>ROWS</span>
                         </div>
                         <Select
@@ -377,9 +377,9 @@ export function ConfigPanel() {
                             ]}
                         />
                     </div>
-                    <div className="space-y-1">
-                        <div className="flex items-center gap-1.5 text-[10px] text-neutral-500 font-medium mb-1">
-                            <Columns size={11} />
+                    <div className="space-y-3">
+                        <div className="flex items-center gap-2.5 text-xs text-neutral-500 font-medium">
+                            <Columns size={14} />
                             <span>VALUES</span>
                         </div>
                         <Select
@@ -399,8 +399,8 @@ export function ConfigPanel() {
                 </section>
 
                 {/* Aggregation & Sorting */}
-                <section className="border-b border-neutral-200 p-3 space-y-3">
-                    <header className="text-[11px] font-semibold text-neutral-600 uppercase tracking-wider -mx-3 px-3 -mt-3 pt-2.5 pb-2 bg-neutral-50 border-b border-neutral-200 mb-3">
+                <section className="border-b border-neutral-200 p-4 space-y-4">
+                    <header className="text-xs font-semibold text-neutral-600 uppercase tracking-wider -mx-4 px-4 -mt-4 pt-3 pb-2.5 bg-neutral-50 border-b border-neutral-200 mb-4">
                         Options
                     </header>
                     <Select
@@ -410,7 +410,7 @@ export function ConfigPanel() {
                         disabled={!dataLoaded}
                         options={aggregations.map((a) => ({ value: a.id, label: a.label }))}
                     />
-                    <div className="grid grid-cols-2 gap-2.5">
+                    <div className="grid grid-cols-2 gap-4">
                         <Select
                             label="Sort By"
                             value={sortBy}
@@ -442,13 +442,13 @@ export function ConfigPanel() {
                         <section key={group} className="border-b border-neutral-200">
                             <button
                                 onClick={() => toggleGroup(group)}
-                                className="w-full px-3 py-2.5 flex items-center justify-between text-[11px] font-semibold text-neutral-600 uppercase tracking-wider bg-neutral-50 hover:bg-neutral-100 transition-colors"
+                                className="w-full px-4 py-3 flex items-center justify-between text-xs font-semibold text-neutral-600 uppercase tracking-wider bg-neutral-50 hover:bg-neutral-100 transition-colors"
                             >
                                 <span>{group}</span>
                                 {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
                             </button>
                             {isExpanded && (
-                                <div className="px-3 py-2">
+                                <div className="px-4 py-4">
                                     {properties.map(prop => renderPropertyControl(prop))}
                                 </div>
                             )}
@@ -458,18 +458,18 @@ export function ConfigPanel() {
             </div>
 
             {/* Action Buttons */}
-            <div className="p-3 border-t border-neutral-200 bg-neutral-50">
+            <div className="p-4 border-t border-neutral-200 bg-neutral-50">
                 <button
                     onClick={reset}
                     disabled={!dataLoaded}
                     className={cn(
-                        "w-full h-9 flex items-center justify-center gap-1.5 text-xs font-semibold rounded border",
+                        "w-full h-8 flex items-center justify-center gap-2 text-xs font-medium rounded-sm border",
                         dataLoaded
                             ? "text-neutral-700 border-neutral-300 bg-white hover:bg-neutral-100 hover:border-neutral-400"
                             : "opacity-50 cursor-not-allowed bg-neutral-100 border-neutral-200"
                     )}
                 >
-                    <RotateCcw size={13} />
+                    <RotateCcw size={14} />
                     Reset
                 </button>
             </div>

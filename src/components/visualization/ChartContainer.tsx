@@ -191,7 +191,7 @@ export function ChartContainer({ spec }: ChartContainerProps) {
     const containerClass = cn(
         "bg-surface border border-border rounded-sm flex flex-col",
         isFullscreen
-            ? "fixed inset-4 z-50 shadow-xl"
+            ? "fixed inset-4 z-50 shadow-lg"
             : "w-full h-full"
     );
 
@@ -213,8 +213,8 @@ export function ChartContainer({ spec }: ChartContainerProps) {
             )}
 
             <div className={containerClass}>
-                <div className="flex items-center justify-between px-3 py-2 border-b border-border">
-                    <div className="flex items-center gap-2">
+                <div className="flex items-center justify-between px-4 py-3 border-b border-border">
+                    <div className="flex items-center gap-3">
                         <h3 className="text-sm font-medium text-text truncate max-w-xs">
                             {spec.title || "Visualization"}
                         </h3>
@@ -223,50 +223,52 @@ export function ChartContainer({ spec }: ChartContainerProps) {
                                 ({chartData.metadata.totalRecords.toLocaleString()} records)
                             </span>
                         )}
-                        {/* Reduction badge - shows when data was optimized */}
                         {renderReductionBadge()}
                     </div>
-                    <div className="flex items-center gap-1">
+                    <div className="flex items-center gap-1.5">
                         <button
                             onClick={handleRefresh}
                             disabled={isLoading}
                             className={cn(
-                                "p-1.5 rounded-sm text-text-muted hover:text-text hover:bg-neutral-100",
+                                "p-2 rounded-sm text-text-muted hover:text-text hover:bg-neutral-100",
                                 "disabled:opacity-50 disabled:cursor-not-allowed"
                             )}
                             title="Refresh"
                         >
-                            <RefreshCw size={14} className={isLoading ? "animate-spin" : ""} />
+                            <RefreshCw size={16} className={isLoading ? "animate-spin" : ""} />
                         </button>
                         <button
                             onClick={handleToggleFullscreen}
-                            className="p-1.5 rounded-sm text-text-muted hover:text-text hover:bg-neutral-100"
+                            className={cn(
+                                "p-2 rounded-sm text-text-muted hover:text-text hover:bg-neutral-100",
+                                isFullscreen && "text-primary bg-primary-muted"
+                            )}
                             title={isFullscreen ? "Exit fullscreen" : "Fullscreen"}
                         >
-                            {isFullscreen ? <Minimize2 size={14} /> : <Maximize2 size={14} />}
+                            {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
                         </button>
                         <button
-                            className="p-1.5 rounded-sm text-text-muted hover:text-text hover:bg-neutral-100 opacity-50 cursor-not-allowed"
+                            className="p-2 rounded-sm text-text-muted hover:text-text hover:bg-neutral-100 opacity-50 cursor-not-allowed"
                             title="Export (coming soon)"
                             disabled
                         >
-                            <Download size={14} />
+                            <Download size={16} />
                         </button>
                     </div>
                 </div>
-                <div className="flex-1 min-h-0 p-4">
+                <div className="flex-1 min-h-0 p-6">
                     {isLoading ? (
                         <div className="w-full h-full flex items-center justify-center">
-                            <Loader2 size={24} className="animate-spin text-primary" />
+                            <Loader2 size={32} className="animate-spin text-primary" />
                         </div>
                     ) : error ? (
-                        <div className="w-full h-full flex flex-col items-center justify-center gap-2">
-                            <AlertCircle size={24} className="text-destructive" />
+                        <div className="w-full h-full flex flex-col items-center justify-center gap-3">
+                            <AlertCircle size={32} className="text-destructive" />
                             <p className="text-sm text-text-secondary">Failed to load chart</p>
                             <p className="text-xs text-text-muted max-w-sm text-center">{error}</p>
                             <button
                                 onClick={handleRefresh}
-                                className="mt-2 px-3 py-1.5 text-xs bg-primary text-white rounded-sm hover:bg-primary-hover"
+                                className="mt-2 px-4 py-2 text-xs bg-primary text-white rounded-sm hover:bg-primary-hover"
                             >
                                 Try again
                             </button>
@@ -276,7 +278,7 @@ export function ChartContainer({ spec }: ChartContainerProps) {
                     ) : null}
                 </div>
                 {chartData?.metadata && !isLoading && !error && (
-                    <div className="px-3 py-1.5 border-t border-border text-[10px] text-text-muted flex items-center gap-4">
+                    <div className="px-4 py-3 border-t border-border text-xs text-text-muted flex items-center gap-4">
                         <span>X: {chartData.metadata.xLabel}</span>
                         <span>Y: {chartData.metadata.yLabel}</span>
                         {chartData.metadata.reduced && chartData.metadata.returnedPoints && (

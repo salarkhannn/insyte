@@ -31,7 +31,7 @@ function ToolbarButton({
             onClick={onClick}
             disabled={disabled}
             className={cn(
-                "h-7 px-2 flex items-center gap-1.5 text-text-secondary rounded-sm transition-colors",
+                "h-8 px-3 flex items-center gap-2 text-text-secondary transition-colors",
                 "hover:bg-neutral-200 hover:text-text",
                 "disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-text-secondary",
                 active && "bg-primary-muted text-primary"
@@ -39,13 +39,13 @@ function ToolbarButton({
             title={label}
         >
             {icon}
-            {label && <span>{label}</span>}
+            {label && <span className="text-xs">{label}</span>}
         </button>
     );
 }
 
 function Divider() {
-    return <div className="w-px h-5 bg-border mx-1" />;
+    return <div className="w-px h-6 bg-border mx-2" />;
 }
 
 export function Toolbar() {
@@ -54,35 +54,35 @@ export function Toolbar() {
     const { openFile, closeFile, isLoading } = useDataset();
 
     return (
-        <header className="h-10 bg-surface border-b border-border flex items-center px-2 gap-0.5 shrink-0">
-            <div className="flex items-center gap-1.5 mr-3 pr-3 border-r border-border">
+        <header className="h-10 bg-surface border-b border-border flex items-center px-4 gap-2 shrink-0">
+            <div className="flex items-center gap-3 mr-4 pr-4 border-r border-border">
                 <div className="w-6 h-6 bg-primary rounded-sm flex items-center justify-center">
-                    <span className="text-white text-xs font-semibold">I</span>
+                    <span className="text-white text-[10px] font-semibold">I</span>
                 </div>
-                <span className="font-medium text-text">Insyte</span>
+                <span className="text-sm font-medium text-text">Insyte</span>
             </div>
 
             <ToolbarButton
-                icon={sidebarCollapsed ? <PanelLeft size={16} /> : <PanelLeftClose size={16} />}
+                icon={sidebarCollapsed ? <PanelLeft size={18} /> : <PanelLeftClose size={18} />}
                 onClick={toggleSidebar}
             />
 
             <Divider />
 
             <ToolbarButton
-                icon={<FolderOpen size={16} />}
+                icon={<FolderOpen size={18} />}
                 label="Open"
                 onClick={openFile}
                 disabled={isLoading}
             />
             <ToolbarButton
-                icon={<X size={16} />}
+                icon={<X size={18} />}
                 label="Close"
                 onClick={closeFile}
                 disabled={!dataLoaded || isLoading}
             />
             <ToolbarButton
-                icon={<Save size={16} />}
+                icon={<Save size={18} />}
                 label="Save"
                 disabled={!dataLoaded}
             />
@@ -90,13 +90,13 @@ export function Toolbar() {
             <Divider />
 
             <ToolbarButton
-                icon={<Table size={16} />}
+                icon={<Table size={18} />}
                 label="Table"
                 onClick={() => setActiveView("table")}
                 active={activeView === "table"}
             />
             <ToolbarButton
-                icon={<BarChart3 size={16} />}
+                icon={<BarChart3 size={18} />}
                 label="Chart"
                 onClick={() => setActiveView("chart")}
                 active={activeView === "chart"}
