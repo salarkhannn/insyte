@@ -1,15 +1,8 @@
-import {
-    PieChart as RechartsPieChart,
-    Pie,
-    Cell,
-    Tooltip,
-    ResponsiveContainer,
-    Legend,
-} from "recharts";
-import type { PieLabelRenderProps } from "recharts";
+import { useEffect, useRef } from "react";
+import * as echarts from "echarts";
 import type { ChartData, PieChartConfig } from "../../../types";
 import { pieChartDefaults } from "./chartDefaults";
-import { getChartColor, formatValue } from "./chartConfig";
+import { getChartColor, formatValue, chartConfig as cfgStyle } from "./chartConfig";
 
 interface PieChartProps {
     data: ChartData;
@@ -17,116 +10,135 @@ interface PieChartProps {
 }
 
 export function PieChart({ data, config }: PieChartProps) {
+    const containerRef = useRef<HTMLDivElement | null>(null);
+    const chartRef = useRef<echarts.ECharts | null>(null);
+    const resizeObserverRef = useRef<ResizeObserver | null>(null);
+
     const cfg = { ...pieChartDefaults, ...config };
-    
+
     const dataset = data.datasets[0];
-    if (!dataset) return null;
 
-    const total = dataset.data.reduce((sum, val) => sum + val, 0);
-    
-    const processedData = data.labels.map((label, index) => ({
-        name: label,
-        value: dataset.data[index],
-        percentage: total > 0 ? (dataset.data[index] / total) * 100 : 0,
-    }));
+    const buildOption = (): echarts.EChartsOption | null => {
+        if (!dataset) return null;
 
-    const renderLabel = (props: PieLabelRenderProps) => {
-        const { cx, cy, midAngle, outerRadius, percent, name, value } = props;
-        
-        if (
-            typeof cx !== "number" ||
-            typeof cy !== "number" ||
-            typeof midAngle !== "number" ||
-            typeof outerRadius !== "number" ||
-            typeof percent !== "number"
-        ) {
-            return null;
-        }
+        const total = dataset.data.reduce((sum, val) => sum + val, 0);
 
-        // Skip very small slices
-        if (percent < 0.05) return null;
+        const pieData = data.labels.map((label, index) => ({
+            name: label,
+            value: dataset.data[index],
+            percentage: total > 0 ? (dataset.data[index] / total) * 100 : 0,
+            itemStyle: {
+                color: cfg.colorScheme[index % cfg.colorScheme.length] ?? getChartColor(index),
+            },
+        }));
 
-        const RADIAN = Math.PI / 180;
-        const radius = outerRadius + 25;
-        const x = cx + radius * Math.cos(-midAngle * RADIAN);
-        const y = cy + radius * Math.sin(-midAngle * RADIAN);
-        
-        let labelText = "";
-        switch (cfg.labelType) {
-            case "name":
-                labelText = String(name ?? "");
-                break;
-            case "value":
-                labelText = formatValue(value as number);
-                break;
-            case "percent":
-            default:
-                labelText = `${(percent * 100).toFixed(1)}%`;
-                break;
-        }
+        const legendPosition = cfg.legend.position;
+        const legendShow = cfg.legend.show && legendPosition !== "none";
+        const legendTop = legendPosition === "top" ? 10 : legendPosition === "bottom" ? undefined : "middle";
+        const legendBottom = legendPosition === "bottom" ? 10 : undefined;
+        const legendLeft = legendPosition === "left" ? "left" : legendPosition === "right" ? "right" : "center";
+        const legendOrient = legendPosition === "left" || legendPosition === "right" ? "vertical" : "horizontal";
 
-        return (
-            <text
-                x={x}
-                y={y}
-                fill="#666"
-                textAnchor={x > cx ? "start" : "end"}
-                dominantBaseline="central"
-                fontSize={12}
-            >
-                {labelText.length > 15 ? `${labelText.slice(0, 14)}…` : labelText}
-            </text>
-        );
+        const labelFormatter = (params: any) => {
+            const name = params.name as string;
+            const value = params.value as number;
+            const percent = params.percent as number;
+            switch (cfg.labelType) {
+                case "name":
+                    return name.length > 15 ? `${name.slice(0, 14)}…` : name;
+                case "value":
+                    return formatValue(value);
+                case "percent":
+                default:
+                    return `${percent.toFixed(1)}%`;
+            }
+        };
+
+        return {
+            animationDuration: cfg.animationDuration,
+            color: cfg.colorScheme,
+            textStyle: { fontFamily: cfgStyle.fontFamily, fontSize: cfgStyle.fontSize },
+            tooltip: cfg.tooltip.enabled
+                ? {
+                      trigger: "item",
+                      backgroundColor: cfgStyle.tooltipBackground,
+                      borderColor: cfgStyle.tooltipBorder,
+                      borderWidth: 1,
+                      textStyle: { fontSize: cfgStyle.fontSize },
+                      formatter: (params: any) => {
+                          const name = params.name as string;
+                          const value = params.value as number;
+                          const percent = params.percent as number;
+                          return `${name}<br/>${formatValue(value)} (${percent.toFixed(1)}%)`;
+                      },
+                  }
+                : { show: false },
+            legend: {
+                show: legendShow,
+                top: legendTop,
+                bottom: legendBottom,
+                left: legendLeft,
+                orient: legendOrient,
+                textStyle: { fontSize: cfgStyle.labelFontSize },
+            },
+            series: [
+                {
+                    type: "pie",
+                    radius: cfg.innerRadius > 0 ? [`${cfg.innerRadius}%`, "70%"] : ["0%", "70%"],
+                    center: ["50%", "50%"],
+                    data: pieData,
+                    label: cfg.showLabels
+                        ? {
+                              show: true,
+                              formatter: labelFormatter,
+                              color: "#666",
+                              fontSize: 12,
+                          }
+                        : { show: false },
+                    labelLine: cfg.showLabels ? { show: true } : { show: false },
+                    emphasis: {
+                        itemStyle: {
+                            shadowBlur: 10,
+                            shadowOffsetX: 0,
+                            shadowColor: "rgba(0, 0, 0, 0.2)",
+                        },
+                    },
+                },
+            ],
+        };
     };
 
-    // Convert innerRadius percentage (0-100) to actual ratio for Recharts
-    const innerRadiusValue = cfg.innerRadius > 0 ? `${cfg.innerRadius}%` : 0;
+    useEffect(() => {
+        if (!containerRef.current) return;
+        if (!chartRef.current) {
+            chartRef.current = echarts.init(containerRef.current, undefined, { renderer: "canvas" });
+            const option = buildOption();
+            if (option) chartRef.current.setOption(option, true);
+            resizeObserverRef.current = new ResizeObserver(() => {
+                chartRef.current?.resize();
+            });
+            resizeObserverRef.current.observe(containerRef.current);
+        }
+        return () => {
+            resizeObserverRef.current?.disconnect();
+            if (chartRef.current) {
+                chartRef.current.dispose();
+                chartRef.current = null;
+            }
+        };
+    }, []);
+
+    useEffect(() => {
+        if (!chartRef.current) return;
+        const option = buildOption();
+        if (option) chartRef.current.setOption(option, true);
+    }, [data, config]);
+
+    if (!dataset) return null;
 
     return (
-        <ResponsiveContainer width="100%" height="100%">
-            <RechartsPieChart margin={{ top: 20, right: 30, left: 20, bottom: 20 }}>
-                <Pie
-                    data={processedData}
-                    dataKey="value"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={innerRadiusValue}
-                    outerRadius="70%"
-                    label={cfg.showLabels ? renderLabel : undefined}
-                    labelLine={cfg.showLabels}
-                    animationDuration={cfg.animationDuration}
-                >
-                    {processedData.map((_, index) => (
-                        <Cell 
-                            key={`cell-${index}`} 
-                            fill={cfg.colorScheme[index % cfg.colorScheme.length] ?? getChartColor(index)} 
-                        />
-                    ))}
-                </Pie>
-                {cfg.tooltip.enabled && (
-                    <Tooltip
-                        formatter={(value, _name, props) => {
-                            const payload = props.payload as { percentage?: number };
-                            const pct = payload?.percentage ?? 0;
-                            return [`${formatValue(value as number)} (${pct.toFixed(1)}%)`, ""];
-                        }}
-                        contentStyle={{
-                            backgroundColor: "#fff",
-                            border: "1px solid #ccc",
-                            borderRadius: 4,
-                            fontSize: 12,
-                        }}
-                    />
-                )}
-                {cfg.legend.show && cfg.legend.position !== "none" && (
-                    <Legend
-                        layout={cfg.legend.position === "left" || cfg.legend.position === "right" ? "vertical" : "horizontal"}
-                        align={cfg.legend.position === "left" ? "left" : cfg.legend.position === "right" ? "right" : "center"}
-                        verticalAlign={cfg.legend.position === "top" ? "top" : cfg.legend.position === "bottom" ? "bottom" : "middle"}
-                    />
-                )}
-            </RechartsPieChart>
-        </ResponsiveContainer>
+        <div className="w-full h-full">
+            <div ref={containerRef} className="w-full h-full" />
+        </div>
     );
 }

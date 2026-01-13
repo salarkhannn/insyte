@@ -1,116 +1,146 @@
-import {
-    AreaChart as RechartsAreaChart,
-    Area,
-    XAxis,
-    YAxis,
-    CartesianGrid,
-    Tooltip,
-    ResponsiveContainer,
-    Legend,
-} from "recharts";
+import { useEffect, useRef } from "react";
+import * as echarts from "echarts";
 import type { ChartData, AreaChartConfig } from "../../../types";
 import { areaChartDefaults } from "./chartDefaults";
-import { getChartColor, formatValue, truncateLabel } from "./chartConfig";
+import { getChartColor, formatValue, truncateLabel, chartConfig as cfgStyle } from "./chartConfig";
 
 interface AreaChartProps {
     data: ChartData;
     config?: Partial<AreaChartConfig>;
 }
 
-const curveTypeMap = {
-    linear: "linear",
-    monotone: "monotone",
-    step: "step",
-} as const;
+const curveTypeMap: Record<string, boolean> = {
+    linear: false,
+    monotone: true,
+    step: false,
+};
+
+const stepTypeMap: Record<string, string | undefined> = {
+    linear: undefined,
+    monotone: undefined,
+    step: "middle",
+};
 
 export function AreaChart({ data, config }: AreaChartProps) {
-    const cfg = { ...areaChartDefaults, ...config };
-    
-    const chartData = data.labels.map((label, index) => ({
-        name: label,
-        ...data.datasets.reduce(
-            (acc, dataset) => ({
-                ...acc,
-                [dataset.label]: dataset.data[index],
-            }),
-            {} as Record<string, number>
-        ),
-    }));
+    const containerRef = useRef<HTMLDivElement | null>(null);
+    const chartRef = useRef<echarts.ECharts | null>(null);
+    const resizeObserverRef = useRef<ResizeObserver | null>(null);
 
-    const curveType = curveTypeMap[cfg.curveType] ?? "monotone";
+    const cfg = { ...areaChartDefaults, ...config };
+
+    const buildOption = (): echarts.EChartsOption => {
+        const legendPosition = cfg.legend.position;
+        const legendShow = cfg.legend.show && legendPosition !== "none" && data.datasets.length > 1;
+        const legendTop = legendPosition === "top" ? 10 : legendPosition === "bottom" ? undefined : "auto";
+        const legendBottom = legendPosition === "bottom" ? 10 : undefined;
+        const legendLeft = legendPosition === "left" ? "left" : legendPosition === "right" ? "right" : "center";
+        const legendOrient = legendPosition === "left" || legendPosition === "right" ? "vertical" : "horizontal";
+
+        const smooth = curveTypeMap[cfg.curveType] ?? false;
+        const step = stepTypeMap[cfg.curveType];
+
+        return {
+            animationDuration: cfg.animationDuration,
+            color: cfg.colorScheme,
+            textStyle: { fontFamily: cfgStyle.fontFamily, fontSize: cfgStyle.fontSize },
+            tooltip: cfg.tooltip.enabled
+                ? {
+                      trigger: "axis",
+                      backgroundColor: cfgStyle.tooltipBackground,
+                      borderColor: cfgStyle.tooltipBorder,
+                      borderWidth: 1,
+                      textStyle: { fontSize: cfgStyle.fontSize },
+                  }
+                : { show: false },
+            legend: {
+                show: legendShow,
+                top: legendTop,
+                bottom: legendBottom,
+                left: legendLeft,
+                orient: legendOrient,
+                textStyle: { fontSize: cfgStyle.labelFontSize },
+            },
+            grid: {
+                top: 20,
+                right: 30,
+                bottom: 60,
+                left: 20,
+                containLabel: true,
+            },
+            xAxis: {
+                type: "category",
+                boundaryGap: false,
+                data: data.labels,
+                axisLabel: {
+                    formatter: (v: string) => truncateLabel(String(v)),
+                    rotate: -45,
+                    color: "#666",
+                    fontSize: cfgStyle.tickFontSize,
+                },
+                axisLine: { lineStyle: { color: cfgStyle.axisStroke } },
+            },
+            yAxis: {
+                type: "value",
+                axisLabel: {
+                    formatter: (v: number) => formatValue(Number(v)),
+                    color: "#666",
+                    fontSize: cfgStyle.tickFontSize,
+                },
+                axisLine: { lineStyle: { color: cfgStyle.axisStroke } },
+                splitLine: { show: true, lineStyle: { color: cfgStyle.gridStroke, type: "dashed" } },
+            },
+            series: data.datasets.map((dataset, idx) => {
+                const color = dataset.color ?? cfg.colorScheme[idx % cfg.colorScheme.length] ?? getChartColor(idx);
+                return {
+                    name: dataset.label,
+                    type: "line" as const,
+                    data: dataset.data,
+                    smooth,
+                    step: step as any,
+                    stack: cfg.stacked ? "total" : undefined,
+                    areaStyle: {
+                        opacity: cfg.fillOpacity,
+                        color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
+                            { offset: 0, color },
+                            { offset: 1, color: "rgba(255,255,255,0)" },
+                        ]),
+                    },
+                    lineStyle: cfg.showLine ? { width: cfg.strokeWidth, color } : { width: 0 },
+                    itemStyle: { color },
+                    showSymbol: false,
+                    emphasis: { focus: "series" },
+                };
+            }),
+        };
+    };
+
+    useEffect(() => {
+        if (!containerRef.current) return;
+        if (!chartRef.current) {
+            chartRef.current = echarts.init(containerRef.current, undefined, { renderer: "canvas" });
+            chartRef.current.setOption(buildOption(), true);
+            resizeObserverRef.current = new ResizeObserver(() => {
+                chartRef.current?.resize();
+            });
+            resizeObserverRef.current.observe(containerRef.current);
+        }
+        return () => {
+            resizeObserverRef.current?.disconnect();
+            if (chartRef.current) {
+                chartRef.current.dispose();
+                chartRef.current = null;
+            }
+        };
+    }, []);
+
+    useEffect(() => {
+        if (!chartRef.current) return;
+        chartRef.current.setOption(buildOption(), true);
+    }, [data, config]);
 
     return (
-        <ResponsiveContainer width="100%" height="100%">
-            <RechartsAreaChart
-                data={chartData}
-                margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
-            >
-                <defs>
-                    {data.datasets.map((dataset, index) => {
-                        const color = dataset.color ?? cfg.colorScheme[index % cfg.colorScheme.length] ?? getChartColor(index);
-                        return (
-                            <linearGradient
-                                key={`gradient-${index}`}
-                                id={`area-gradient-${index}`}
-                                x1="0"
-                                y1="0"
-                                x2="0"
-                                y2="1"
-                            >
-                                <stop offset="5%" stopColor={color} stopOpacity={cfg.fillOpacity} />
-                                <stop offset="95%" stopColor={color} stopOpacity={0.05} />
-                            </linearGradient>
-                        );
-                    })}
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
-                <XAxis
-                    dataKey="name"
-                    tick={{ fontSize: 12, fill: "#666" }}
-                    tickFormatter={(value) => truncateLabel(String(value))}
-                    interval="preserveStartEnd"
-                    angle={-45}
-                    textAnchor="end"
-                    height={60}
-                />
-                <YAxis
-                    tickFormatter={formatValue}
-                    tick={{ fontSize: 12, fill: "#666" }}
-                />
-                {cfg.tooltip.enabled && (
-                    <Tooltip
-                        formatter={(value) => [formatValue(value as number), ""]}
-                        contentStyle={{
-                            backgroundColor: "#fff",
-                            border: "1px solid #ccc",
-                            borderRadius: 4,
-                            fontSize: 12,
-                        }}
-                    />
-                )}
-                {cfg.legend.show && cfg.legend.position !== "none" && data.datasets.length > 1 && (
-                    <Legend
-                        verticalAlign={cfg.legend.position === "top" ? "top" : cfg.legend.position === "bottom" ? "bottom" : "middle"}
-                        align={cfg.legend.position === "left" ? "left" : cfg.legend.position === "right" ? "right" : "center"}
-                    />
-                )}
-                {data.datasets.map((dataset, index) => {
-                    const color = dataset.color ?? cfg.colorScheme[index % cfg.colorScheme.length] ?? getChartColor(index);
-                    return (
-                        <Area
-                            key={dataset.label}
-                            type={curveType as "linear" | "monotone" | "step"}
-                            dataKey={dataset.label}
-                            stroke={cfg.showLine ? color : "none"}
-                            strokeWidth={cfg.showLine ? cfg.strokeWidth : 0}
-                            fill={`url(#area-gradient-${index})`}
-                            fillOpacity={1}
-                            stackId={cfg.stacked ? "stack" : undefined}
-                            animationDuration={cfg.animationDuration}
-                        />
-                    );
-                })}
-            </RechartsAreaChart>
-        </ResponsiveContainer>
+        <div className="w-full h-full">
+            <div ref={containerRef} className="w-full h-full" />
+        </div>
     );
 }
