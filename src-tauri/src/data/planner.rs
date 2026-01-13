@@ -13,9 +13,8 @@
 
 use crate::ai::types::{AggregationType, FilterSpec, SortField, SortOrder, VisualizationSpec};
 use crate::data::safety::{
-    CardinalityAction, CardinalityInfo, ChartSafetyConfig, DateBinGranularity,
-    MemorySafetyCheck, ReductionMetadata, ReductionReason,
-    ReductionStep, ZoomContext, DEFAULT_TOP_N,
+    CardinalityAction, CardinalityInfo, ChartSafetyConfig, DateBinGranularity, MemorySafetyCheck,
+    ReductionMetadata, ReductionReason, ReductionStep, ZoomContext, DEFAULT_TOP_N,
     MAX_VISUAL_POINTS, SAMPLING_SEED,
 };
 use crate::error::DataError;
@@ -66,10 +65,7 @@ pub enum Transformation {
     },
 
     /// Apply numeric binning to a column.
-    NumericBin {
-        column: String,
-        bin_count: usize,
-    },
+    NumericBin { column: String, bin_count: usize },
 
     /// Group by and aggregate.
     Aggregate {
@@ -86,19 +82,13 @@ pub enum Transformation {
     },
 
     /// Apply deterministic sampling.
-    Sample {
-        target_rows: usize,
-        seed: u64,
-    },
+    Sample { target_rows: usize, seed: u64 },
 
     /// Apply row limit (final safety cap).
     Limit(usize),
 
     /// Sort the result.
-    Sort {
-        column: String,
-        descending: bool,
-    },
+    Sort { column: String, descending: bool },
 }
 
 impl ExecutionPlan {
@@ -151,7 +141,8 @@ impl QueryPlanner {
         spec: &VisualizationSpec,
     ) -> Result<ExecutionPlan, DataError> {
         let row_count = df.height();
-        let safety_config = ChartSafetyConfig::for_chart_type(&format!("{:?}", spec.chart_type).to_lowercase());
+        let safety_config =
+            ChartSafetyConfig::for_chart_type(&format!("{:?}", spec.chart_type).to_lowercase());
 
         // Step 1: Memory safety check
         let mem_check = MemorySafetyCheck::estimate(row_count, df.width());
@@ -213,8 +204,8 @@ impl QueryPlanner {
         }
 
         // 3c: Aggregation (required for most chart types)
-        let needs_aggregation = safety_config.requires_aggregation
-            || x_card.unique_count > safety_config.max_points;
+        let needs_aggregation =
+            safety_config.requires_aggregation || x_card.unique_count > safety_config.max_points;
 
         if needs_aggregation {
             transformations.push(Transformation::Aggregate {
@@ -274,7 +265,9 @@ impl QueryPlanner {
         // 3e: Sampling for scatter plots or as last resort
         if safety_config.allows_sampling && !needs_aggregation {
             if row_count > safety_config.max_points {
-                let target = self.zoom_context.calculate_point_limit(safety_config.max_points);
+                let target = self
+                    .zoom_context
+                    .calculate_point_limit(safety_config.max_points);
                 let ratio = target as f64 / row_count as f64;
 
                 transformations.push(Transformation::Sample {
@@ -313,7 +306,8 @@ impl QueryPlanner {
 
         // Generate warning message if data was reduced
         if reduction_metadata.reduced {
-            reduction_metadata.warning_message = Some(self.generate_warning_message(&reduction_metadata));
+            reduction_metadata.warning_message =
+                Some(self.generate_warning_message(&reduction_metadata));
         }
 
         Ok(ExecutionPlan {
@@ -410,13 +404,12 @@ impl PlanExecutor {
 
         for transformation in &plan.transformations {
             lazy_df = match transformation {
-                Transformation::Filter(filters) => {
-                    Self::apply_filters(lazy_df, filters)?
-                }
+                Transformation::Filter(filters) => Self::apply_filters(lazy_df, filters)?,
 
-                Transformation::DateBin { column, granularity } => {
-                    Self::apply_date_binning(lazy_df, column, *granularity)?
-                }
+                Transformation::DateBin {
+                    column,
+                    granularity,
+                } => Self::apply_date_binning(lazy_df, column, *granularity)?,
 
                 Transformation::NumericBin { column, bin_count } => {
                     Self::apply_numeric_binning(lazy_df, column, *bin_count)?
@@ -426,9 +419,7 @@ impl PlanExecutor {
                     group_by,
                     measure,
                     aggregation,
-                } => {
-                    Self::apply_aggregation(lazy_df, group_by, measure, aggregation)?
-                }
+                } => Self::apply_aggregation(lazy_df, group_by, measure, aggregation)?,
 
                 Transformation::TopN {
                     column,
@@ -444,16 +435,12 @@ impl PlanExecutor {
                     Self::apply_sampling(lazy_df, *target_rows, *seed)?
                 }
 
-                Transformation::Limit(limit) => {
-                    lazy_df.limit(*limit as u32)
-                }
+                Transformation::Limit(limit) => lazy_df.limit(*limit as u32),
 
-                Transformation::Sort { column, descending } => {
-                    lazy_df.sort(
-                        [column],
-                        SortMultipleOptions::default().with_order_descending(*descending),
-                    )
-                }
+                Transformation::Sort { column, descending } => lazy_df.sort(
+                    [column],
+                    SortMultipleOptions::default().with_order_descending(*descending),
+                ),
             };
         }
 
@@ -566,25 +553,15 @@ impl PlanExecutor {
     ) -> Result<LazyFrame, DataError> {
         // Create a new column with binned dates
         let bin_expr = match granularity {
-            DateBinGranularity::Year => {
-                col(column).dt().year().alias(column)
-            }
-            DateBinGranularity::Quarter => {
-                col(column).dt().quarter().alias(column)
-            }
+            DateBinGranularity::Year => col(column).dt().year().alias(column),
+            DateBinGranularity::Quarter => col(column).dt().quarter().alias(column),
             DateBinGranularity::Month => {
                 // Create year-month format for grouping
                 col(column).dt().strftime("%Y-%m").alias(column)
             }
-            DateBinGranularity::Week => {
-                col(column).dt().week().alias(column)
-            }
-            DateBinGranularity::Day => {
-                col(column).dt().date().alias(column)
-            }
-            DateBinGranularity::Hour => {
-                col(column).dt().hour().alias(column)
-            }
+            DateBinGranularity::Week => col(column).dt().week().alias(column),
+            DateBinGranularity::Day => col(column).dt().date().alias(column),
+            DateBinGranularity::Hour => col(column).dt().hour().alias(column),
         };
 
         Ok(df.with_column(bin_expr))
@@ -615,6 +592,7 @@ impl PlanExecutor {
             AggregationType::Count => col(measure).count().alias("value"),
             AggregationType::Min => col(measure).min().alias("value"),
             AggregationType::Max => col(measure).max().alias("value"),
+            AggregationType::Median => col(measure).median().alias("value"),
         };
 
         Ok(df.group_by([col(group_by)]).agg([agg_expr]))
@@ -675,18 +653,15 @@ impl PlanExecutor {
     ) -> Result<LazyFrame, DataError> {
         // Polars sample with seed for determinism
         let fraction = 1.0; // We'll use limit instead for determinism
-        
+
         // For true deterministic sampling, we sort by a hash of row content
         // and take the first N rows. This ensures same rows are selected
         // across re-renders.
-        
+
         // Simple approach: use row index modulo for even distribution
         Ok(df
             .with_row_index("__sample_idx", None)
-            .filter(
-                (col("__sample_idx") % lit(seed as i64 % 100 + 1))
-                    .eq(lit(0))
-            )
+            .filter((col("__sample_idx") % lit(seed as i64 % 100 + 1)).eq(lit(0)))
             .limit(target_rows as u32)
             .drop(["__sample_idx"]))
     }
@@ -736,6 +711,7 @@ mod tests {
             sort_order: SortOrder::Desc,
             title: "Test Chart".to_string(),
             filters: vec![],
+            chart_config: None,
         }
     }
 
@@ -759,9 +735,10 @@ mod tests {
 
         let plan = planner.plan(&df, &spec).unwrap();
 
-        let has_aggregation = plan.transformations.iter().any(|t| {
-            matches!(t, Transformation::Aggregate { .. })
-        });
+        let has_aggregation = plan
+            .transformations
+            .iter()
+            .any(|t| matches!(t, Transformation::Aggregate { .. }));
 
         assert!(has_aggregation, "Bar chart plan must include aggregation");
     }
@@ -774,9 +751,10 @@ mod tests {
 
         let plan = planner.plan(&df, &spec).unwrap();
 
-        let has_limit = plan.transformations.iter().any(|t| {
-            matches!(t, Transformation::Limit(_))
-        });
+        let has_limit = plan
+            .transformations
+            .iter()
+            .any(|t| matches!(t, Transformation::Limit(_)));
 
         assert!(has_limit, "Plan must include safety limit");
     }

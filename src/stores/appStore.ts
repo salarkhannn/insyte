@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import type { Column, VisualizationSpec } from "../types";
+import type { Column, VisualizationSpec, QueryHistoryItem } from "../types";
 
 interface AppState {
     dataLoaded: boolean;
@@ -15,6 +15,7 @@ interface AppState {
     processingMessage: string | null;
 
     currentVisualization: VisualizationSpec | null;
+    queryHistory: QueryHistoryItem[];
 
     projectPath: string | null;
     isDirty: boolean;
@@ -38,6 +39,9 @@ interface AppActions {
     setProjectPath: (path: string | null) => void;
     setDirty: (dirty: boolean) => void;
     setError: (error: string | null) => void;
+    addQueryHistoryItem: (item: QueryHistoryItem) => void;
+    setQueryHistory: (history: QueryHistoryItem[]) => void;
+    clearQueryHistory: () => void;
     reset: () => void;
 }
 
@@ -53,6 +57,7 @@ const initialState: AppState = {
     isProcessing: false,
     processingMessage: null,
     currentVisualization: null,
+    queryHistory: [],
     projectPath: null,
     isDirty: false,
     error: null,
@@ -93,6 +98,7 @@ export const useAppStore = create<AppState & AppActions>((set) => ({
             rowCount: 0,
             fileSize: 0,
             currentVisualization: null,
+            queryHistory: [],
             isDirty: false,
             error: null,
         }),
@@ -109,6 +115,16 @@ export const useAppStore = create<AppState & AppActions>((set) => ({
     setDirty: (dirty) => set({ isDirty: dirty }),
 
     setError: (error) => set({ error, isProcessing: false }),
+
+    addQueryHistoryItem: (item) =>
+        set((state) => ({
+            queryHistory: [item, ...state.queryHistory].slice(0, 50),
+            isDirty: true,
+        })),
+
+    setQueryHistory: (history) => set({ queryHistory: history }),
+
+    clearQueryHistory: () => set({ queryHistory: [] }),
 
     reset: () => set(initialState),
 }));

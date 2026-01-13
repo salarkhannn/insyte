@@ -1,13 +1,20 @@
+mod ai;
 mod data;
 mod error;
-mod ai;
+mod project;
 mod settings;
 
 use ai::process_ai_query;
-use data::{execute_visualization_query, execute_scatter_query, execute_table_query, execute_progressive_query};
 use data::ingest::{clear_data, get_data_page, list_excel_sheets, load_csv, load_excel, load_json};
 use data::state::AppDataState;
-use settings::{get_settings, update_settings, set_api_key, validate_api_key};
+use data::{
+    execute_progressive_query, execute_scatter_query, execute_table_query,
+    execute_visualization_query,
+};
+use project::{
+    add_to_recent, get_recent_projects, new_project, open_project, save_project, save_project_as,
+};
+use settings::{get_settings, set_api_key, update_settings, validate_api_key};
 use tauri::Manager;
 
 #[tauri::command]
@@ -39,6 +46,12 @@ pub fn run() {
             execute_scatter_query,
             execute_table_query,
             execute_progressive_query,
+            save_project,
+            save_project_as,
+            open_project,
+            new_project,
+            get_recent_projects,
+            add_to_recent,
         ])
         .setup(|app| {
             let data_state = AppDataState::default();

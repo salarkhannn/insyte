@@ -24,7 +24,6 @@ pub enum DataError {
     // ============================================================================
     // SAFETY-RELATED ERRORS
     // ============================================================================
-
     /// Query was blocked due to safety concerns (too many rows, high cardinality, etc.)
     #[error("Query blocked: {reason}")]
     SafetyBlock {
@@ -57,10 +56,7 @@ pub enum DataError {
 
     /// Required column not found in dataset.
     #[error("Column '{column}' not found in dataset. Available columns: {available}")]
-    ColumnNotFound {
-        column: String,
-        available: String,
-    },
+    ColumnNotFound { column: String, available: String },
 
     /// Incompatible data type for requested operation.
     #[error("Column '{column}' has type '{actual_type}' but operation requires '{expected_type}'")]
@@ -72,9 +68,7 @@ pub enum DataError {
 
     /// Query cancelled by user or timeout.
     #[error("Query cancelled: {reason}")]
-    QueryCancelled {
-        reason: String,
-    },
+    QueryCancelled { reason: String },
 }
 
 impl From<std::io::Error> for DataError {
@@ -105,24 +99,60 @@ impl From<calamine::XlsxError> for DataError {
 pub enum AIError {
     #[error("API request failed: {0}")]
     RequestFailed(String),
-    
+
     #[error("Invalid API key")]
     InvalidApiKey,
-    
+
     #[error("API key not configured")]
     ApiKeyNotSet,
-    
+
     #[error("Failed to parse API response: {0}")]
     ParseError(String),
-    
+
     #[error("Rate limit exceeded")]
     RateLimitExceeded,
-    
+
     #[error("Model not available: {0}")]
     ModelNotAvailable(String),
 }
 
 impl serde::Serialize for AIError {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        serializer.serialize_str(&self.to_string())
+    }
+}
+
+#[derive(Debug, thiserror::Error)]
+pub enum ProjectError {
+    #[error("File not found: {0}")]
+    FileNotFound(String),
+
+    #[error("Invalid project format: {0}")]
+    InvalidFormat(String),
+
+    #[error("Version mismatch: file version {file_version}, app version {app_version}")]
+    VersionMismatch {
+        file_version: String,
+        app_version: String,
+    },
+
+    #[error("Failed to read project: {0}")]
+    ReadError(String),
+
+    #[error("Failed to write project: {0}")]
+    WriteError(String),
+
+    #[error("No data loaded")]
+    NoData,
+
+    #[error("Operation cancelled")]
+    Cancelled,
+}
+
+impl serde::Serialize for ProjectError {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,

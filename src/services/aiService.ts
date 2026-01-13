@@ -2,19 +2,20 @@ import { invoke } from "@tauri-apps/api/core";
 import type { VisualizationSpec, ChartData, TableData, FilterSpec, ReductionReason } from "../types";
 
 interface BackendVisualizationSpec {
-    chart_type: "bar" | "line" | "area" | "pie" | "scatter";
-    x_field: string;
-    y_field: string;
-    aggregation: "sum" | "avg" | "count" | "min" | "max";
-    group_by: string | null;
-    sort_by: "x" | "y" | "none";
-    sort_order: "asc" | "desc";
+    chartType: "bar" | "line" | "area" | "pie" | "scatter";
+    xField: string;
+    yField: string;
+    aggregation: "sum" | "avg" | "count" | "min" | "max" | "median";
+    groupBy: string | null;
+    sortBy: "x" | "y" | "none";
+    sortOrder: "asc" | "desc" | "none";
     title: string;
     filters: Array<{
         column: string;
         operator: string;
         value: unknown;
     }>;
+    chartConfig?: unknown;
 }
 
 interface BackendChartData {
@@ -67,40 +68,39 @@ export interface AppSettings {
 
 function transformVisualizationSpec(spec: BackendVisualizationSpec): VisualizationSpec {
     return {
-        chartType: spec.chart_type,
-        xField: spec.x_field,
-        yField: spec.y_field,
+        chartType: spec.chartType,
+        xField: spec.xField,
+        yField: spec.yField,
         aggregation: spec.aggregation,
-        groupBy: spec.group_by,
-        sortBy: spec.sort_by,
-        sortOrder: spec.sort_order,
+        groupBy: spec.groupBy,
+        sortBy: spec.sortBy,
+        sortOrder: spec.sortOrder,
         title: spec.title,
         filters: spec.filters.map((f) => ({
             column: f.column,
             operator: f.operator as VisualizationSpec["filters"][0]["operator"],
             value: f.value as string | number | boolean | null,
         })),
+        chartConfig: spec.chartConfig as VisualizationSpec["chartConfig"],
     };
 }
 
 function transformVisualizationSpecToBackend(spec: VisualizationSpec): BackendVisualizationSpec {
-    const aggregation = spec.aggregation === "median" ? "avg" : spec.aggregation;
-    const sortOrder = spec.sortOrder === "none" ? "asc" : spec.sortOrder;
-    
     return {
-        chart_type: spec.chartType as BackendVisualizationSpec["chart_type"],
-        x_field: spec.xField,
-        y_field: spec.yField,
-        aggregation: aggregation as BackendVisualizationSpec["aggregation"],
-        group_by: spec.groupBy,
-        sort_by: spec.sortBy,
-        sort_order: sortOrder as BackendVisualizationSpec["sort_order"],
+        chartType: spec.chartType,
+        xField: spec.xField,
+        yField: spec.yField,
+        aggregation: spec.aggregation,
+        groupBy: spec.groupBy,
+        sortBy: spec.sortBy,
+        sortOrder: spec.sortOrder,
         title: spec.title,
         filters: spec.filters.map((f) => ({
             column: f.column,
             operator: f.operator,
             value: f.value,
         })),
+        chartConfig: spec.chartConfig,
     };
 }
 

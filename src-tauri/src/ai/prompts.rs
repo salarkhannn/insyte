@@ -1,9 +1,20 @@
 use crate::data::types::ColumnInfo;
 
-pub fn build_visualization_prompt(user_query: &str, columns: &[ColumnInfo], row_count: usize) -> String {
+pub fn build_visualization_prompt(
+    user_query: &str,
+    columns: &[ColumnInfo],
+    row_count: usize,
+) -> String {
     let schema_description = columns
         .iter()
-        .map(|col| format!("  - {} ({}{})", col.name, col.dtype, if col.nullable { ", nullable" } else { "" }))
+        .map(|col| {
+            format!(
+                "  - {} ({}{})",
+                col.name,
+                col.dtype,
+                if col.nullable { ", nullable" } else { "" }
+            )
+        })
         .collect::<Vec<_>>()
         .join("\n");
 
@@ -35,23 +46,21 @@ RULES:
 1. Output ONLY valid JSON, no explanation or markdown
 2. Use exact column names from schema
 3. Choose the chart type that best matches the user's request
-4. Include aggregation when needed: sum, avg, count, min, max
+4. Include aggregation when needed: sum, avg, count, min, max, median
 5. If the query is ambiguous, make reasonable assumptions
 
 OUTPUT FORMAT:
 {{
-  "chart_type": "bar|line|area|pie|scatter",
-  "x_field": "column_name",
-  "y_field": "column_name",
-  "aggregation": "sum|avg|count|min|max",
-  "group_by": null,
-  "sort_by": "x|y|none",
-  "sort_order": "asc|desc",
+  "chartType": "bar|line|area|pie|scatter",
+  "xField": "column_name",
+  "yField": "column_name",
+  "aggregation": "sum|avg|count|min|max|median",
+  "groupBy": null,
+  "sortBy": "x|y|none",
+  "sortOrder": "asc|desc|none",
   "title": "Chart Title",
   "filters": []
 }}"#,
-        row_count,
-        schema_description,
-        user_query
+        row_count, schema_description, user_query
     )
 }

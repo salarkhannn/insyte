@@ -16,10 +16,10 @@
 //! - Fail safely: no panics, no UI freezes
 //! - All heavy computation uses lazy evaluation
 
-use crate::ai::types::{AggregationType, FilterOperator, FilterSpec, SortField, SortOrder, VisualizationSpec};
-use crate::data::safety::{
-    MAX_VISUAL_POINTS, ZoomContext,
+use crate::ai::types::{
+    AggregationType, FilterOperator, FilterSpec, SortField, SortOrder, VisualizationSpec,
 };
+use crate::data::safety::{ZoomContext, MAX_VISUAL_POINTS};
 use crate::data::sampling::scatter_sample;
 use crate::data::state::AppDataState;
 use crate::error::DataError;
@@ -124,7 +124,9 @@ fn apply_filter(df: LazyFrame, filter: &FilterSpec) -> Result<LazyFrame, DataErr
             } else if filter.value.is_boolean() {
                 col_expr.eq(lit(filter.value.as_bool().unwrap_or_default()))
             } else {
-                return Err(DataError::ParseError("Unsupported filter value type".into()));
+                return Err(DataError::ParseError(
+                    "Unsupported filter value type".into(),
+                ));
             }
         }
         FilterOperator::Neq => {
@@ -135,7 +137,9 @@ fn apply_filter(df: LazyFrame, filter: &FilterSpec) -> Result<LazyFrame, DataErr
             } else if filter.value.is_i64() {
                 col_expr.neq(lit(filter.value.as_i64().unwrap_or_default()))
             } else {
-                return Err(DataError::ParseError("Unsupported filter value type".into()));
+                return Err(DataError::ParseError(
+                    "Unsupported filter value type".into(),
+                ));
             }
         }
         FilterOperator::Gt => {
@@ -144,7 +148,9 @@ fn apply_filter(df: LazyFrame, filter: &FilterSpec) -> Result<LazyFrame, DataErr
             } else if filter.value.is_i64() {
                 col_expr.gt(lit(filter.value.as_i64().unwrap_or_default()))
             } else {
-                return Err(DataError::ParseError("GT filter requires numeric value".into()));
+                return Err(DataError::ParseError(
+                    "GT filter requires numeric value".into(),
+                ));
             }
         }
         FilterOperator::Lt => {
@@ -153,7 +159,9 @@ fn apply_filter(df: LazyFrame, filter: &FilterSpec) -> Result<LazyFrame, DataErr
             } else if filter.value.is_i64() {
                 col_expr.lt(lit(filter.value.as_i64().unwrap_or_default()))
             } else {
-                return Err(DataError::ParseError("LT filter requires numeric value".into()));
+                return Err(DataError::ParseError(
+                    "LT filter requires numeric value".into(),
+                ));
             }
         }
         FilterOperator::Gte => {
@@ -162,7 +170,9 @@ fn apply_filter(df: LazyFrame, filter: &FilterSpec) -> Result<LazyFrame, DataErr
             } else if filter.value.is_i64() {
                 col_expr.gt_eq(lit(filter.value.as_i64().unwrap_or_default()))
             } else {
-                return Err(DataError::ParseError("GTE filter requires numeric value".into()));
+                return Err(DataError::ParseError(
+                    "GTE filter requires numeric value".into(),
+                ));
             }
         }
         FilterOperator::Lte => {
@@ -171,7 +181,9 @@ fn apply_filter(df: LazyFrame, filter: &FilterSpec) -> Result<LazyFrame, DataErr
             } else if filter.value.is_i64() {
                 col_expr.lt_eq(lit(filter.value.as_i64().unwrap_or_default()))
             } else {
-                return Err(DataError::ParseError("LTE filter requires numeric value".into()));
+                return Err(DataError::ParseError(
+                    "LTE filter requires numeric value".into(),
+                ));
             }
         }
         FilterOperator::Contains => {
@@ -212,6 +224,7 @@ fn apply_aggregation(
         AggregationType::Count => col(y_field).count().alias("value"),
         AggregationType::Min => col(y_field).min().alias("value"),
         AggregationType::Max => col(y_field).max().alias("value"),
+        AggregationType::Median => col(y_field).median().alias("value"),
     };
 
     Ok(df.group_by([col(x_field)]).agg([agg_expr]))
@@ -325,8 +338,12 @@ fn apply_top_n_with_others(
 // ============================================================================
 
 fn extract_chart_data(df: DataFrame, x_field: &str) -> Result<(Vec<String>, Vec<f64>), DataError> {
-    let x_col = df.column(x_field).map_err(|e| DataError::ParseError(e.to_string()))?;
-    let y_col = df.column("value").map_err(|e| DataError::ParseError(e.to_string()))?;
+    let x_col = df
+        .column(x_field)
+        .map_err(|e| DataError::ParseError(e.to_string()))?;
+    let y_col = df
+        .column("value")
+        .map_err(|e| DataError::ParseError(e.to_string()))?;
 
     let labels: Vec<String> = series_to_strings(x_col)?;
 
@@ -344,20 +361,20 @@ fn extract_chart_data(df: DataFrame, x_field: &str) -> Result<(Vec<String>, Vec<
 fn series_to_strings(series: &Series) -> Result<Vec<String>, DataError> {
     let len = series.len();
     let mut result = Vec::with_capacity(len);
-    
+
     let string_series = series
         .cast(&DataType::String)
         .map_err(|e| DataError::ParseError(e.to_string()))?;
-    
+
     let ca = string_series
         .str()
         .map_err(|e| DataError::ParseError(e.to_string()))?;
-    
+
     for i in 0..len {
         let val = ca.get(i).unwrap_or("").to_string();
         result.push(val);
     }
-    
+
     Ok(result)
 }
 
@@ -419,10 +436,7 @@ pub async fn execute_visualization_query(
         .lock()
         .map_err(|e| DataError::ParseError(format!("Failed to acquire data lock: {}", e)))?;
 
-    let df = data_state
-        .get_dataframe()
-        .ok_or(DataError::NoData)?
-        .clone();
+    let df = data_state.get_dataframe().ok_or(DataError::NoData)?.clone();
 
     let total_records = df.height();
 
@@ -545,6 +559,7 @@ pub async fn execute_visualization_query(
         AggregationType::Count => format!("Count of {}", spec.y_field),
         AggregationType::Min => format!("Min of {}", spec.y_field),
         AggregationType::Max => format!("Max of {}", spec.y_field),
+        AggregationType::Median => format!("Median of {}", spec.y_field),
     };
 
     // === STEP 13: RETURN WITH FULL METADATA ===
@@ -597,13 +612,23 @@ pub async fn execute_scatter_query(
     if df.column(&spec.x_field).is_err() {
         return Err(DataError::ColumnNotFound {
             column: spec.x_field.clone(),
-            available: df.get_column_names().iter().map(|s| s.to_string()).collect::<Vec<_>>().join(", "),
+            available: df
+                .get_column_names()
+                .iter()
+                .map(|s| s.to_string())
+                .collect::<Vec<_>>()
+                .join(", "),
         });
     }
     if df.column(&spec.y_field).is_err() {
         return Err(DataError::ColumnNotFound {
             column: spec.y_field.clone(),
-            available: df.get_column_names().iter().map(|s| s.to_string()).collect::<Vec<_>>().join(", "),
+            available: df
+                .get_column_names()
+                .iter()
+                .map(|s| s.to_string())
+                .collect::<Vec<_>>()
+                .join(", "),
         });
     }
 
@@ -643,11 +668,7 @@ pub async fn execute_scatter_query(
         ));
 
         // Use deterministic sampling
-        let sample_result = scatter_sample(
-            filtered_df.lazy(),
-            filtered_count,
-            SCATTER_MAX_POINTS,
-        )?;
+        let sample_result = scatter_sample(filtered_df.lazy(), filtered_count, SCATTER_MAX_POINTS)?;
 
         sample_result.data
     } else {
@@ -921,15 +942,10 @@ mod tests {
     #[test]
     fn test_apply_aggregation() {
         let df = create_test_df();
-        let result = apply_aggregation(
-            df.lazy(),
-            "category",
-            "value",
-            &AggregationType::Sum,
-        )
-        .unwrap()
-        .collect()
-        .unwrap();
+        let result = apply_aggregation(df.lazy(), "category", "value", &AggregationType::Sum)
+            .unwrap()
+            .collect()
+            .unwrap();
 
         // Should have 3 rows (A, B, C)
         assert_eq!(result.height(), 3);
@@ -940,15 +956,10 @@ mod tests {
     #[test]
     fn test_top_n_with_others() {
         let df = create_test_df();
-        let aggregated = apply_aggregation(
-            df.lazy(),
-            "category",
-            "value",
-            &AggregationType::Sum,
-        )
-        .unwrap()
-        .collect()
-        .unwrap();
+        let aggregated = apply_aggregation(df.lazy(), "category", "value", &AggregationType::Sum)
+            .unwrap()
+            .collect()
+            .unwrap();
 
         let (result, has_others) =
             apply_top_n_with_others(aggregated.lazy(), 2, "category", true).unwrap();

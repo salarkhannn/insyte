@@ -1,3 +1,4 @@
+import { useEffect, useCallback } from "react";
 import {
     FolderOpen,
     Save,
@@ -6,10 +7,18 @@ import {
     PanelLeftClose,
     PanelLeft,
     X,
+    FilePlus,
 } from "lucide-react";
 import { useAppStore } from "../../stores/appStore";
 import { useDataset } from "../../hooks/useDataset";
 import { cn } from "../../utils";
+import {
+    saveProject,
+    saveProjectAs,
+    openProject,
+    newProject,
+} from "../../services/projectService";
+import { loadFile } from "../../services/fileService";
 
 interface ToolbarButtonProps {
     icon: React.ReactNode;
@@ -17,6 +26,7 @@ interface ToolbarButtonProps {
     onClick?: () => void;
     active?: boolean;
     disabled?: boolean;
+    shortcut?: string;
 }
 
 function ToolbarButton({
@@ -25,7 +35,9 @@ function ToolbarButton({
     onClick,
     active,
     disabled,
+    shortcut,
 }: ToolbarButtonProps) {
+    const title = shortcut ? `${label} (${shortcut})` : label;
     return (
         <button
             onClick={onClick}
@@ -36,7 +48,7 @@ function ToolbarButton({
                 "disabled:opacity-40 disabled:hover:bg-transparent disabled:hover:text-text-secondary",
                 active && "bg-primary-muted text-primary"
             )}
-            title={label}
+            title={title}
         >
             {icon}
             {label && <span className="text-xs">{label}</span>}
@@ -49,9 +61,134 @@ function Divider() {
 }
 
 export function Toolbar() {
-    const { activeView, setActiveView, sidebarCollapsed, toggleSidebar, dataLoaded } =
-        useAppStore();
+    const {
+        activeView,
+        setActiveView,
+        sidebarCollapsed,
+        toggleSidebar,
+        dataLoaded,
+        projectPath,
+        currentVisualization,
+        queryHistory,
+        isDirty,
+        setProjectPath,
+        setDirty,
+        setDataset,
+        setVisualization,
+        setQueryHistory,
+        clearDataset,
+        setProcessing,
+        setError,
+    } = useAppStore();
     const { openFile, closeFile, isLoading } = useDataset();
+
+    const handleSave = useCallback(async () => {
+        if (!dataLoaded) return;
+
+        try {
+            setProcessing(true, "Saving project...");
+            const savedPath = await saveProject(
+                projectPath,
+                currentVisualization,
+                queryHistory
+            );
+            setProjectPath(savedPath);
+            setDirty(false);
+        } catch (err) {
+            if (err !== "Operation cancelled") {
+                setError(err instanceof Error ? err.message : String(err));
+            }
+        } finally {
+            setProcessing(false);
+        }
+    }, [dataLoaded, projectPath, currentVisualization, queryHistory, setProcessing, setProjectPath, setDirty, setError]);
+
+    const handleSaveAs = useCallback(async () => {
+        if (!dataLoaded) return;
+
+        try {
+            setProcessing(true, "Saving project...");
+            const savedPath = await saveProjectAs(currentVisualization, queryHistory);
+            setProjectPath(savedPath);
+            setDirty(false);
+        } catch (err) {
+            if (err !== "Operation cancelled") {
+                setError(err instanceof Error ? err.message : String(err));
+            }
+        } finally {
+            setProcessing(false);
+        }
+    }, [dataLoaded, currentVisualization, queryHistory, setProcessing, setProjectPath, setDirty, setError]);
+
+    const handleOpenProject = useCallback(async () => {
+        try {
+            setProcessing(true, "Opening project...");
+            const project = await openProject();
+
+            if (project.data.sourcePath) {
+                const datasetInfo = await loadFile(project.data.sourcePath);
+                setDataset({
+                    fileName: datasetInfo.fileName,
+                    filePath: datasetInfo.filePath,
+                    columns: datasetInfo.columns,
+                    rowCount: datasetInfo.rowCount,
+                    fileSize: datasetInfo.fileSize,
+                });
+            }
+
+            if (project.visualization) {
+                setVisualization(project.visualization);
+            }
+
+            setQueryHistory(project.queryHistory);
+            setDirty(false);
+        } catch (err) {
+            if (err !== "Operation cancelled") {
+                setError(err instanceof Error ? err.message : String(err));
+            }
+        } finally {
+            setProcessing(false);
+        }
+    }, [setProcessing, setDataset, setVisualization, setQueryHistory, setDirty, setError]);
+
+    const handleNewProject = useCallback(async () => {
+        if (isDirty) {
+            const confirmed = window.confirm("You have unsaved changes. Discard and create new project?");
+            if (!confirmed) return;
+        }
+
+        try {
+            await newProject();
+            clearDataset();
+            setProjectPath(null);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : String(err));
+        }
+    }, [isDirty, clearDataset, setProjectPath, setError]);
+
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === "s") {
+                e.preventDefault();
+                if (e.shiftKey) {
+                    handleSaveAs();
+                } else {
+                    handleSave();
+                }
+            }
+            if ((e.ctrlKey || e.metaKey) && e.key === "o" && !e.shiftKey) {
+                e.preventDefault();
+                handleOpenProject();
+            }
+            if ((e.ctrlKey || e.metaKey) && e.key === "n") {
+                e.preventDefault();
+                handleNewProject();
+            }
+        };
+
+        window.addEventListener("keydown", handleKeyDown);
+        return () => window.removeEventListener("keydown", handleKeyDown);
+    }, [handleSave, handleSaveAs, handleOpenProject, handleNewProject]);
 
     return (
         <header className="h-10 bg-surface border-b border-border flex items-center px-4 gap-2 shrink-0">
@@ -70,10 +207,24 @@ export function Toolbar() {
             <Divider />
 
             <ToolbarButton
+                icon={<FilePlus size={18} />}
+                label="New"
+                onClick={handleNewProject}
+                disabled={isLoading}
+                shortcut="Ctrl+N"
+            />
+            <ToolbarButton
                 icon={<FolderOpen size={18} />}
                 label="Open"
                 onClick={openFile}
                 disabled={isLoading}
+            />
+            <ToolbarButton
+                icon={<FolderOpen size={18} />}
+                label="Open Project"
+                onClick={handleOpenProject}
+                disabled={isLoading}
+                shortcut="Ctrl+O"
             />
             <ToolbarButton
                 icon={<X size={18} />}
@@ -84,7 +235,9 @@ export function Toolbar() {
             <ToolbarButton
                 icon={<Save size={18} />}
                 label="Save"
-                disabled={!dataLoaded}
+                onClick={handleSave}
+                disabled={!dataLoaded || isLoading}
+                shortcut="Ctrl+S"
             />
 
             <Divider />
