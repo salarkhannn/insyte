@@ -61,6 +61,9 @@ export function Sidebar() {
             )}
         >
             <aside className="w-72 bg-white border-r border-neutral-200 flex flex-col overflow-hidden">
+                <div className="h-10 px-3 flex items-center border-b border-neutral-200 shrink-0">
+                    <span className="text-xs font-medium text-neutral-500 uppercase tracking-wide">Explorer</span>
+                </div>
                 <div className="flex-1 overflow-y-auto scrollbar-thin">
                     {/* DATA Section */}
                     <CollapsibleSection
