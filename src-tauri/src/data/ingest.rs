@@ -83,7 +83,7 @@ pub async fn load_csv(
     path: String,
     state: State<'_, AppDataState>,
 ) -> Result<DatasetInfo, DataError> {
-    let file_path = Path::new(&path);
+    let file_path = std::path::PathBuf::from(&path);
 
     if !file_path.exists() {
         return Err(DataError::FileNotFound(path));
@@ -100,7 +100,8 @@ pub async fn load_csv(
     let df = CsvReadOptions::default()
         .with_has_header(true)
         .with_infer_schema_length(Some(1000))
-        .try_into_reader_with_file_path(Some(path.clone().into()))?
+        .with_ignore_errors(true)
+        .try_into_reader_with_file_path(Some(file_path.clone()))?
         .finish()?;
 
     let columns = df_to_columns(&df);
