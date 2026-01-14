@@ -21,6 +21,8 @@ interface AppState {
     projectPath: string | null;
     isDirty: boolean;
 
+    showWelcome: boolean;
+
     error: string | null;
 }
 
@@ -45,6 +47,7 @@ interface AppActions {
     addQueryHistoryItem: (item: QueryHistoryItem) => void;
     setQueryHistory: (history: QueryHistoryItem[]) => void;
     clearQueryHistory: () => void;
+    setShowWelcome: (show: boolean) => void;
     reset: () => void;
 }
 
@@ -64,6 +67,7 @@ const initialState: AppState = {
     queryHistory: [],
     projectPath: null,
     isDirty: false,
+    showWelcome: true,
     error: null,
 };
 
@@ -95,6 +99,7 @@ export const useAppStore = create<AppState & AppActions>((set) => ({
             rowCount: info.rowCount,
             fileSize: info.fileSize,
             isDirty: true,
+            showWelcome: false,
             error: null,
         }),
 
@@ -134,6 +139,8 @@ export const useAppStore = create<AppState & AppActions>((set) => ({
     setQueryHistory: (history) => set({ queryHistory: history }),
 
     clearQueryHistory: () => set({ queryHistory: [] }),
+
+    setShowWelcome: (show) => set({ showWelcome: show }),
 
     reset: () => set(initialState),
 }));

@@ -35,6 +35,7 @@ export function useMenuEvents() {
         clearDataset,
         setProcessing,
         setError,
+        setShowWelcome,
     } = useAppStore();
 
     const { setRowData, clearData: clearDataStore } = useDataStore();
@@ -167,7 +168,8 @@ export function useMenuEvents() {
         clearDataStore();
         setProjectPath(null);
         setDirty(false);
-    }, [clearDataset, clearDataStore, setProjectPath, setDirty]);
+        setShowWelcome(true);
+    }, [clearDataset, clearDataStore, setProjectPath, setDirty, setShowWelcome]);
 
     // Subscribe to menu events from the singleton service
     useEffect(() => {
@@ -220,4 +222,30 @@ export function useMenuEvents() {
         toggleSidebar,
         toggleAiPanel,
     ]);
+
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            const isMod = e.ctrlKey || e.metaKey;
+
+            if (isMod && e.key === "s" && !e.shiftKey) {
+                e.preventDefault();
+                handleSave();
+            } else if (isMod && e.key === "s" && e.shiftKey) {
+                e.preventDefault();
+                handleSaveAs();
+            } else if (isMod && e.key === "w") {
+                e.preventDefault();
+                handleCloseProject();
+            } else if (isMod && e.key === "n") {
+                e.preventDefault();
+                handleNewProject();
+            } else if (isMod && e.key === "o" && !e.shiftKey) {
+                e.preventDefault();
+                handleOpenProject();
+            }
+        };
+
+        document.addEventListener("keydown", handleKeyDown);
+        return () => document.removeEventListener("keydown", handleKeyDown);
+    }, [handleSave, handleSaveAs, handleCloseProject, handleNewProject, handleOpenProject]);
 }
