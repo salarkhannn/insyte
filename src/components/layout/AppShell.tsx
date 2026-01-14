@@ -1,3 +1,4 @@
+import { TitleBar } from "./TitleBar";
 import { Toolbar } from "./Toolbar";
 import { Sidebar } from "./Sidebar";
 import { Canvas } from "./Canvas";
@@ -10,6 +11,7 @@ export function AppShell() {
 
     return (
         <div className="h-screen flex flex-col bg-canvas">
+            <TitleBar />
             <Toolbar />
             <div className="flex flex-1 min-h-0">
                 <Sidebar />

@@ -51,6 +51,16 @@ class MenuService {
         };
     }
 
+    emit(eventId: MenuEventId): void {
+        this.listeners.forEach((callback) => {
+            try {
+                callback(eventId);
+            } catch (err) {
+                console.error("Error in menu event handler:", err);
+            }
+        });
+    }
+
     destroy(): void {
         if (this.unlistenFn) {
             this.unlistenFn();

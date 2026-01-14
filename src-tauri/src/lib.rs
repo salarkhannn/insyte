@@ -1,7 +1,6 @@
 mod ai;
 mod data;
 mod error;
-mod menu;
 mod project;
 mod settings;
 
@@ -12,7 +11,6 @@ use data::{
     execute_progressive_query, execute_scatter_query, execute_table_query,
     execute_visualization_query,
 };
-use menu::{create_menu, handle_menu_event};
 use project::{
     add_to_recent, get_recent_projects, new_project, open_project, save_project, save_project_as,
 };
@@ -54,12 +52,8 @@ pub fn run() {
             let data_state = AppDataState::default();
             app.manage(data_state);
 
-            let menu = create_menu(app)?;
-            app.set_menu(menu)?;
-
             Ok(())
         })
-        .on_menu_event(handle_menu_event)
         .run(tauri::generate_context!())
         .expect("error while running tauri application");
 }
