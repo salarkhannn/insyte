@@ -2,6 +2,7 @@ import { useEffect, useCallback } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
 import { useAppStore } from "../stores/appStore";
 import { useDataStore } from "../stores/dataStore";
+import { useVizBuilderStore } from "../stores/vizBuilderStore";
 import { menuService, MenuEventId } from "../services/menuService";
 import {
     saveProject,
@@ -39,6 +40,7 @@ export function useMenuEvents() {
     } = useAppStore();
 
     const { setRowData, clearData: clearDataStore } = useDataStore();
+    const resetVizBuilder = useVizBuilderStore((state) => state.reset);
 
     const handleNewProject = useCallback(async () => {
         try {
@@ -141,8 +143,11 @@ export function useMenuEvents() {
                 ],
             });
 
-            if (selected) {
+            if (selected && typeof selected === "string") {
                 setProcessing(true, "Loading data...");
+                
+                resetVizBuilder();
+                
                 const info = await loadFile(selected);
                 setDataset({
                     fileName: info.fileName,
@@ -152,7 +157,6 @@ export function useMenuEvents() {
                     fileSize: info.fileSize,
                 });
 
-                // Load the actual row data into the data store
                 const page = await getDataPage(0, 10000, info.columns);
                 setRowData(page.rows, page.totalRows);
             }
@@ -161,15 +165,16 @@ export function useMenuEvents() {
         } finally {
             setProcessing(false);
         }
-    }, [setDataset, setProcessing, setError, setRowData]);
+    }, [setDataset, setProcessing, setError, setRowData, resetVizBuilder]);
 
     const handleCloseProject = useCallback(() => {
         clearDataset();
         clearDataStore();
+        resetVizBuilder();
         setProjectPath(null);
         setDirty(false);
         setShowWelcome(true);
-    }, [clearDataset, clearDataStore, setProjectPath, setDirty, setShowWelcome]);
+    }, [clearDataset, clearDataStore, resetVizBuilder, setProjectPath, setDirty, setShowWelcome]);
 
     // Subscribe to menu events from the singleton service
     useEffect(() => {

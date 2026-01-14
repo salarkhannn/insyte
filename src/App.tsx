@@ -3,6 +3,7 @@ import { AppShell } from "./components/layout";
 import { WelcomeScreen } from "./components/welcome";
 import { useAppStore } from "./stores/appStore";
 import { useDataStore } from "./stores/dataStore";
+import { useVizBuilderStore } from "./stores/vizBuilderStore";
 import { loadFile, getDataPage } from "./services/fileService";
 import { openProject } from "./services/projectService";
 
@@ -18,6 +19,7 @@ function App() {
         setError,
     } = useAppStore();
     const { setRowData } = useDataStore();
+    const resetVizBuilder = useVizBuilderStore((state) => state.reset);
 
     const handleNewProject = () => {
         setShowWelcome(false);
@@ -34,6 +36,9 @@ function App() {
 
             if (selected && typeof selected === "string") {
                 setProcessing(true, "Loading data...");
+                
+                resetVizBuilder();
+                
                 const info = await loadFile(selected);
                 setDataset({
                     fileName: info.fileName,
