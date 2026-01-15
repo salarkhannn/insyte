@@ -23,6 +23,8 @@ interface AppState {
 
     showWelcome: boolean;
 
+    settingsOpen: boolean;
+
     error: string | null;
 }
 
@@ -48,6 +50,7 @@ interface AppActions {
     setQueryHistory: (history: QueryHistoryItem[]) => void;
     clearQueryHistory: () => void;
     setShowWelcome: (show: boolean) => void;
+    setSettingsOpen: (open: boolean) => void;
     reset: () => void;
 }
 
@@ -68,6 +71,7 @@ const initialState: AppState = {
     projectPath: null,
     isDirty: false,
     showWelcome: true,
+    settingsOpen: false,
     error: null,
 };
 
@@ -145,6 +149,8 @@ export const useAppStore = create<AppState & AppActions>((set) => ({
     clearQueryHistory: () => set({ queryHistory: [] }),
 
     setShowWelcome: (show) => set({ showWelcome: show }),
+
+    setSettingsOpen: (open) => set({ settingsOpen: open }),
 
     reset: () => set(initialState),
 }));

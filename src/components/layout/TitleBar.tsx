@@ -187,6 +187,12 @@ export function TitleBar() {
                         <MenuItem label="Paste" shortcut="Ctrl+V" onClick={() => document.execCommand("paste")} />
                         <MenuSeparator />
                         <MenuItem label="Select All" shortcut="Ctrl+A" onClick={() => document.execCommand("selectAll")} />
+                        <MenuSeparator />
+                        <MenuItem
+                            label="Settings..."
+                            shortcut="Ctrl+,"
+                            onClick={() => emitMenuEvent("open_settings")}
+                        />
                     </MenuDropdown>
 
                     <MenuDropdown label="View">

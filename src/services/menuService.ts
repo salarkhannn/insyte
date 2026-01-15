@@ -21,7 +21,8 @@ export type MenuEventId =
     | "view_table"
     | "view_chart"
     | "toggle_sidebar"
-    | "toggle_ai_panel";
+    | "toggle_ai_panel"
+    | "open_settings";
 
 type MenuEventCallback = (eventId: MenuEventId) => void;
 

@@ -1,4 +1,4 @@
-import { Table, BarChart3, PanelLeft, PanelLeftClose } from "lucide-react";
+import { Table, BarChart3, PanelLeft, PanelLeftClose, Settings } from "lucide-react";
 import { useAppStore } from "../../stores/appStore";
 import { cn } from "../../utils";
 
@@ -26,7 +26,7 @@ function ActivityButton({ icon, onClick, active, title }: ActivityButtonProps) {
 }
 
 export function ActivityBar() {
-    const { activeView, setActiveView, sidebarCollapsed, toggleSidebar } = useAppStore();
+    const { activeView, setActiveView, sidebarCollapsed, toggleSidebar, setSettingsOpen } = useAppStore();
 
     return (
         <nav className="w-11 bg-neutral-100 border-r border-neutral-300 flex flex-col shrink-0">
@@ -50,6 +50,13 @@ export function ActivityBar() {
                     title="Visualization View"
                 />
             </div>
+            <div className="flex-1" />
+            <div className="h-px bg-neutral-300 mx-2" />
+            <ActivityButton
+                icon={<Settings size={18} />}
+                onClick={() => setSettingsOpen(true)}
+                title="Settings"
+            />
         </nav>
     );
 }

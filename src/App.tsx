@@ -1,6 +1,7 @@
 import { open } from "@tauri-apps/plugin-dialog";
 import { AppShell } from "./components/layout";
 import { WelcomeScreen } from "./components/welcome";
+import { SettingsDialog } from "./components/settings";
 import { useAppStore } from "./stores/appStore";
 import { useDataStore } from "./stores/dataStore";
 import { useVizBuilderStore } from "./stores/vizBuilderStore";
@@ -10,7 +11,9 @@ import { openProject } from "./services/projectService";
 function App() {
     const {
         showWelcome,
+        settingsOpen,
         setShowWelcome,
+        setSettingsOpen,
         setDataset,
         setVisualization,
         setQueryHistory,
@@ -126,16 +129,24 @@ function App() {
 
     if (showWelcome) {
         return (
-            <WelcomeScreen
-                onNewProject={handleNewProject}
-                onImportData={handleImportData}
-                onOpenProject={handleOpenProject}
-                onOpenRecent={handleOpenRecent}
-            />
+            <>
+                <WelcomeScreen
+                    onNewProject={handleNewProject}
+                    onImportData={handleImportData}
+                    onOpenProject={handleOpenProject}
+                    onOpenRecent={handleOpenRecent}
+                />
+                <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
+            </>
         );
     }
 
-    return <AppShell />;
+    return (
+        <>
+            <AppShell />
+            <SettingsDialog open={settingsOpen} onOpenChange={setSettingsOpen} />
+        </>
+    );
 }
 
 export default App;

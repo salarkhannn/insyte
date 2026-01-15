@@ -37,6 +37,7 @@ export function useMenuEvents() {
         setProcessing,
         setError,
         setShowWelcome,
+        setSettingsOpen,
     } = useAppStore();
 
     const { setRowData, clearData: clearDataStore } = useDataStore();
@@ -263,6 +264,9 @@ export function useMenuEvents() {
                 case "toggle_ai_panel":
                     toggleAiPanel();
                     break;
+                case "open_settings":
+                    setSettingsOpen(true);
+                    break;
             }
         };
 
@@ -281,6 +285,7 @@ export function useMenuEvents() {
         setActiveView,
         toggleSidebar,
         toggleAiPanel,
+        setSettingsOpen,
     ]);
 
     useEffect(() => {
@@ -302,10 +307,13 @@ export function useMenuEvents() {
             } else if (isMod && e.key === "o" && !e.shiftKey) {
                 e.preventDefault();
                 handleOpenProject();
+            } else if (isMod && e.key === ",") {
+                e.preventDefault();
+                setSettingsOpen(true);
             }
         };
 
         document.addEventListener("keydown", handleKeyDown);
         return () => document.removeEventListener("keydown", handleKeyDown);
-    }, [handleSave, handleSaveAs, handleCloseProject, handleNewProject, handleOpenProject]);
+    }, [handleSave, handleSaveAs, handleCloseProject, handleNewProject, handleOpenProject, setSettingsOpen]);
 }

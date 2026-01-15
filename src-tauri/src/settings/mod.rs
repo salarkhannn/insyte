@@ -79,14 +79,15 @@ pub async fn set_api_key(key: String) -> Result<(), String> {
 }
 
 #[tauri::command]
-pub async fn validate_api_key() -> Result<bool, AIError> {
+pub async fn validate_api_key(api_key: Option<String>) -> Result<bool, AIError> {
     let settings = AppSettings::load()
         .map_err(|e| AIError::RequestFailed(e))?;
     
-    let api_key = settings.groq_api_key
+    let key = api_key
+        .or(settings.groq_api_key)
         .ok_or(AIError::ApiKeyNotSet)?;
     
-    let client = crate::ai::GroqClient::new(api_key)
+    let client = crate::ai::GroqClient::new(key)
         .with_model(settings.groq_model);
     
     client.validate().await
