@@ -3,6 +3,7 @@ import * as echarts from "echarts";
 import type { ChartData, ScatterChartConfig } from "../../../types";
 import { scatterChartDefaults } from "./chartDefaults";
 import { getChartColor, formatValue, chartConfig as cfgStyle } from "./chartConfig";
+import { useChartInstanceStore } from "../../../stores/chartInstanceStore";
 
 interface ScatterChartProps {
     data: ChartData;
@@ -13,6 +14,7 @@ export function ScatterChart({ data, config }: ScatterChartProps) {
     const containerRef = useRef<HTMLDivElement | null>(null);
     const chartRef = useRef<echarts.ECharts | null>(null);
     const resizeObserverRef = useRef<ResizeObserver | null>(null);
+    const setInstance = useChartInstanceStore((state) => state.setInstance);
 
     const cfg = { ...scatterChartDefaults, ...config };
 
@@ -114,6 +116,7 @@ export function ScatterChart({ data, config }: ScatterChartProps) {
             chartRef.current = echarts.init(containerRef.current, undefined, { renderer: "canvas" });
             const option = buildOption();
             if (option) chartRef.current.setOption(option, true);
+            setInstance(chartRef.current);
             resizeObserverRef.current = new ResizeObserver(() => {
                 chartRef.current?.resize();
             });
@@ -122,6 +125,7 @@ export function ScatterChart({ data, config }: ScatterChartProps) {
         return () => {
             resizeObserverRef.current?.disconnect();
             if (chartRef.current) {
+                setInstance(null);
                 chartRef.current.dispose();
                 chartRef.current = null;
             }

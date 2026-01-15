@@ -176,7 +176,51 @@ export function useMenuEvents() {
         setShowWelcome(true);
     }, [clearDataset, clearDataStore, resetVizBuilder, setProjectPath, setDirty, setShowWelcome]);
 
-    // Subscribe to menu events from the singleton service
+    const handleExportCsv = useCallback(async () => {
+        try {
+            setProcessing(true, "Exporting CSV...");
+            const { exportCsv } = await import("../services/exportService");
+            await exportCsv();
+        } catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
+            if (!message.includes("cancelled")) {
+                setError(message);
+            }
+        } finally {
+            setProcessing(false);
+        }
+    }, [setProcessing, setError]);
+
+    const handleExportExcel = useCallback(async () => {
+        try {
+            setProcessing(true, "Exporting Excel...");
+            const { exportExcel } = await import("../services/exportService");
+            await exportExcel();
+        } catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
+            if (!message.includes("cancelled")) {
+                setError(message);
+            }
+        } finally {
+            setProcessing(false);
+        }
+    }, [setProcessing, setError]);
+
+    const handleExportChart = useCallback(async () => {
+        try {
+            setProcessing(true, "Exporting chart...");
+            const { exportChartAsPng } = await import("../services/exportService");
+            await exportChartAsPng();
+        } catch (err) {
+            const message = err instanceof Error ? err.message : String(err);
+            if (!message.includes("cancelled")) {
+                setError(message);
+            }
+        } finally {
+            setProcessing(false);
+        }
+    }, [setProcessing, setError]);
+
     useEffect(() => {
         const handleMenuEvent = (menuId: MenuEventId) => {
             switch (menuId) {
@@ -198,6 +242,15 @@ export function useMenuEvents() {
                 case "close_project":
                     handleCloseProject();
                     break;
+                case "export_csv":
+                    handleExportCsv();
+                    break;
+                case "export_excel":
+                    handleExportExcel();
+                    break;
+                case "export_chart":
+                    handleExportChart();
+                    break;
                 case "view_table":
                     setActiveView("table");
                     break;
@@ -213,7 +266,6 @@ export function useMenuEvents() {
             }
         };
 
-        // Subscribe returns an unsubscribe function
         const unsubscribe = menuService.subscribe(handleMenuEvent);
         return unsubscribe;
     }, [
@@ -223,6 +275,9 @@ export function useMenuEvents() {
         handleSaveAs,
         handleImportData,
         handleCloseProject,
+        handleExportCsv,
+        handleExportExcel,
+        handleExportChart,
         setActiveView,
         toggleSidebar,
         toggleAiPanel,

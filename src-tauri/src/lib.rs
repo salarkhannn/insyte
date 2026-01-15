@@ -1,6 +1,7 @@
 mod ai;
 mod data;
 mod error;
+mod export;
 mod project;
 mod settings;
 
@@ -11,6 +12,7 @@ use data::{
     execute_progressive_query, execute_scatter_query, execute_table_query,
     execute_visualization_query,
 };
+use export::{export_chart_image, export_csv, export_excel};
 use project::{
     add_to_recent, get_recent_projects, new_project, open_project, save_project, save_project_as,
 };
@@ -47,6 +49,9 @@ pub fn run() {
             new_project,
             get_recent_projects,
             add_to_recent,
+            export_csv,
+            export_excel,
+            export_chart_image,
         ])
         .setup(|app| {
             let data_state = AppDataState::default();

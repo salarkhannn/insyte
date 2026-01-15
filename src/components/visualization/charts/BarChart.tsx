@@ -3,6 +3,7 @@ import * as echarts from "echarts";
 import type { ChartData, BarChartConfig } from "../../../types";
 import { barChartDefaults } from "./chartDefaults";
 import { getChartColor, formatValue, truncateLabel, chartConfig as cfgStyle } from "./chartConfig";
+import { useChartInstanceStore } from "../../../stores/chartInstanceStore";
 
 interface BarChartProps {
     data: ChartData;
@@ -13,6 +14,7 @@ export function BarChart({ data, config }: BarChartProps) {
     const containerRef = useRef<HTMLDivElement | null>(null);
     const chartRef = useRef<echarts.ECharts | null>(null);
     const resizeObserverRef = useRef<ResizeObserver | null>(null);
+    const setInstance = useChartInstanceStore((state) => state.setInstance);
 
     const cfg = { ...barChartDefaults, ...config };
     const isHorizontal = cfg.orientation === "horizontal";
@@ -125,6 +127,7 @@ export function BarChart({ data, config }: BarChartProps) {
             chartRef.current = echarts.init(containerRef.current, undefined, { renderer: "canvas" });
             const option = buildOption();
             chartRef.current.setOption(option, true);
+            setInstance(chartRef.current);
             resizeObserverRef.current = new ResizeObserver(() => {
                 chartRef.current && chartRef.current.resize();
             });
@@ -133,6 +136,7 @@ export function BarChart({ data, config }: BarChartProps) {
         return () => {
             resizeObserverRef.current && resizeObserverRef.current.disconnect();
             if (chartRef.current) {
+                setInstance(null);
                 chartRef.current.dispose();
                 chartRef.current = null;
             }

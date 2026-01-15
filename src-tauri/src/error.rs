@@ -69,6 +69,12 @@ pub enum DataError {
     /// Query cancelled by user or timeout.
     #[error("Query cancelled: {reason}")]
     QueryCancelled { reason: String },
+
+    #[error("Failed to write data: {0}")]
+    WriteError(String),
+
+    #[error("Operation cancelled")]
+    Cancelled,
 }
 
 impl From<std::io::Error> for DataError {

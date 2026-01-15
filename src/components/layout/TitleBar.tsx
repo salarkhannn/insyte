@@ -157,9 +157,18 @@ export function TitleBar() {
                             label="Import Data..."
                             onClick={() => emitMenuEvent("import_data")}
                         />
+                        <MenuSeparator />
                         <MenuItem
-                            label="Export Data..."
-                            onClick={() => emitMenuEvent("export_data")}
+                            label="Export as CSV..."
+                            onClick={() => emitMenuEvent("export_csv")}
+                        />
+                        <MenuItem
+                            label="Export as Excel..."
+                            onClick={() => emitMenuEvent("export_excel")}
+                        />
+                        <MenuItem
+                            label="Export Chart as Image..."
+                            onClick={() => emitMenuEvent("export_chart")}
                         />
                         <MenuSeparator />
                         <MenuItem

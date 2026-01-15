@@ -3,6 +3,7 @@ import { RefreshCw, Maximize2, Minimize2, Download, Loader2, AlertCircle, Info, 
 import { useAppStore } from "../../stores/appStore";
 import { useChartConfigStore } from "../../stores/chartConfigStore";
 import { executeVisualizationQuery, executeScatterQuery } from "../../services/aiService";
+import { menuService } from "../../services/menuService";
 import { BarChart, LineChart, AreaChart, PieChart, ScatterChart } from "./charts";
 import { cn } from "../../utils";
 import type { ChartData, VisualizationSpec, ReductionReason } from "../../types";
@@ -212,7 +213,7 @@ export function ChartContainer({ spec }: ChartContainerProps) {
                 />
             )}
 
-            <div className={containerClass}>
+            <div className={containerClass} data-chart-container>
                 <div className="flex items-center justify-between px-4 py-3 border-b border-border">
                     <div className="flex items-center gap-3">
                         <h3 className="text-sm font-medium text-text truncate max-w-xs">
@@ -248,9 +249,9 @@ export function ChartContainer({ spec }: ChartContainerProps) {
                             {isFullscreen ? <Minimize2 size={16} /> : <Maximize2 size={16} />}
                         </button>
                         <button
-                            className="p-2 rounded-sm text-text-muted hover:text-text hover:bg-neutral-100 opacity-50 cursor-not-allowed"
-                            title="Export (coming soon)"
-                            disabled
+                            onClick={() => menuService.emit("export_chart")}
+                            className="p-2 rounded-sm text-text-muted hover:text-text hover:bg-neutral-100"
+                            title="Export chart as image"
                         >
                             <Download size={16} />
                         </button>

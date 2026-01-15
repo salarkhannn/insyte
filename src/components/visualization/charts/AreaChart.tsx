@@ -3,6 +3,7 @@ import * as echarts from "echarts";
 import type { ChartData, AreaChartConfig } from "../../../types";
 import { areaChartDefaults } from "./chartDefaults";
 import { getChartColor, formatValue, truncateLabel, chartConfig as cfgStyle } from "./chartConfig";
+import { useChartInstanceStore } from "../../../stores/chartInstanceStore";
 
 interface AreaChartProps {
     data: ChartData;
@@ -25,6 +26,7 @@ export function AreaChart({ data, config }: AreaChartProps) {
     const containerRef = useRef<HTMLDivElement | null>(null);
     const chartRef = useRef<echarts.ECharts | null>(null);
     const resizeObserverRef = useRef<ResizeObserver | null>(null);
+    const setInstance = useChartInstanceStore((state) => state.setInstance);
 
     const cfg = { ...areaChartDefaults, ...config };
 
@@ -119,6 +121,7 @@ export function AreaChart({ data, config }: AreaChartProps) {
         if (!chartRef.current) {
             chartRef.current = echarts.init(containerRef.current, undefined, { renderer: "canvas" });
             chartRef.current.setOption(buildOption(), true);
+            setInstance(chartRef.current);
             resizeObserverRef.current = new ResizeObserver(() => {
                 chartRef.current?.resize();
             });
@@ -127,6 +130,7 @@ export function AreaChart({ data, config }: AreaChartProps) {
         return () => {
             resizeObserverRef.current?.disconnect();
             if (chartRef.current) {
+                setInstance(null);
                 chartRef.current.dispose();
                 chartRef.current = null;
             }

@@ -3,6 +3,7 @@ import * as echarts from "echarts";
 import type { ChartData, LineChartConfig } from "../../../types";
 import { lineChartDefaults } from "./chartDefaults";
 import { getChartColor, formatValue, truncateLabel, chartConfig as cfgStyle } from "./chartConfig";
+import { useChartInstanceStore } from "../../../stores/chartInstanceStore";
 
 interface LineChartProps {
     data: ChartData;
@@ -25,6 +26,7 @@ export function LineChart({ data, config }: LineChartProps) {
     const containerRef = useRef<HTMLDivElement | null>(null);
     const chartRef = useRef<echarts.ECharts | null>(null);
     const resizeObserverRef = useRef<ResizeObserver | null>(null);
+    const setInstance = useChartInstanceStore((state) => state.setInstance);
 
     const cfg = { ...lineChartDefaults, ...config };
 
@@ -113,6 +115,7 @@ export function LineChart({ data, config }: LineChartProps) {
         if (!chartRef.current) {
             chartRef.current = echarts.init(containerRef.current, undefined, { renderer: "canvas" });
             chartRef.current.setOption(buildOption(), true);
+            setInstance(chartRef.current);
             resizeObserverRef.current = new ResizeObserver(() => {
                 chartRef.current?.resize();
             });
@@ -121,6 +124,7 @@ export function LineChart({ data, config }: LineChartProps) {
         return () => {
             resizeObserverRef.current?.disconnect();
             if (chartRef.current) {
+                setInstance(null);
                 chartRef.current.dispose();
                 chartRef.current = null;
             }
