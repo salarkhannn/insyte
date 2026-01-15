@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { VisualizationSpec, QueryHistoryItem } from "../types";
+import type { VisualizationSpec, QueryHistoryItem, Worksheet } from "../types";
 
 export interface ProjectData {
     sourceType: "Path" | "Embedded";
@@ -19,8 +19,14 @@ export interface InsyteProject {
     createdAt: string;
     modifiedAt: string;
     data: ProjectData;
-    visualization: VisualizationSpec | null;
+    worksheets: Worksheet[];
+    activeWorksheetId: string | null;
     queryHistory: QueryHistoryItem[];
+}
+
+export interface OpenProjectResponse {
+    path: string;
+    project: InsyteProject;
 }
 
 export interface RecentProject {
@@ -30,7 +36,15 @@ export interface RecentProject {
     dataSource: string | null;
 }
 
-interface BackendProject {
+interface BackendRecentProject {
+    path: string;
+    name: string;
+    last_opened: string;
+    data_source: string | null;
+}
+
+interface BackendOpenProjectResponse {
+    path: string;
     version: string;
     created_at: string;
     modified_at: string;
@@ -46,7 +60,12 @@ interface BackendProject {
             row_count: number;
         };
     };
-    visualization: VisualizationSpec | null;
+    worksheets: Array<{
+        id: string;
+        name: string;
+        visualization: VisualizationSpec | null;
+    }>;
+    active_worksheet_id: string | null;
     query_history: Array<{
         id: string;
         query: string;
@@ -55,38 +74,6 @@ interface BackendProject {
         success: boolean;
         error?: string;
     }>;
-}
-
-interface BackendRecentProject {
-    path: string;
-    name: string;
-    last_opened: string;
-    data_source: string | null;
-}
-
-function transformProject(backend: BackendProject): InsyteProject {
-    return {
-        version: backend.version,
-        createdAt: backend.created_at,
-        modifiedAt: backend.modified_at,
-        data: {
-            sourceType: backend.data.source_type,
-            sourcePath: backend.data.source_path,
-            schema: {
-                columns: backend.data.schema.columns,
-                rowCount: backend.data.schema.row_count,
-            },
-        },
-        visualization: backend.visualization,
-        queryHistory: backend.query_history.map((item) => ({
-            id: item.id,
-            query: item.query,
-            timestamp: item.timestamp,
-            visualization: item.visualization,
-            success: item.success,
-            error: item.error,
-        })),
-    };
 }
 
 function transformRecentProject(backend: BackendRecentProject): RecentProject {
@@ -100,7 +87,8 @@ function transformRecentProject(backend: BackendRecentProject): RecentProject {
 
 export async function saveProject(
     path: string | null,
-    visualization: VisualizationSpec | null,
+    worksheets: Worksheet[],
+    activeWorksheetId: string,
     queryHistory: QueryHistoryItem[]
 ): Promise<string> {
     const backendHistory = queryHistory.map((item) => ({
@@ -114,13 +102,15 @@ export async function saveProject(
 
     return invoke<string>("save_project", {
         path,
-        visualization,
+        worksheets,
+        activeWorksheetId,
         queryHistory: backendHistory,
     });
 }
 
 export async function saveProjectAs(
-    visualization: VisualizationSpec | null,
+    worksheets: Worksheet[],
+    activeWorksheetId: string,
     queryHistory: QueryHistoryItem[]
 ): Promise<string> {
     const backendHistory = queryHistory.map((item) => ({
@@ -133,18 +123,44 @@ export async function saveProjectAs(
     }));
 
     return invoke<string>("save_project_as", {
-        visualization,
+        worksheets,
+        activeWorksheetId,
         queryHistory: backendHistory,
     });
 }
 
 export async function openProject(
     path?: string
-): Promise<InsyteProject> {
-    const backend = await invoke<BackendProject>("open_project", {
+): Promise<OpenProjectResponse> {
+    const backend = await invoke<BackendOpenProjectResponse>("open_project", {
         path: path ?? null,
     });
-    return transformProject(backend);
+    return {
+        path: backend.path,
+        project: {
+            version: backend.version,
+            createdAt: backend.created_at,
+            modifiedAt: backend.modified_at,
+            data: {
+                sourceType: backend.data.source_type,
+                sourcePath: backend.data.source_path,
+                schema: {
+                    columns: backend.data.schema.columns,
+                    rowCount: backend.data.schema.row_count,
+                },
+            },
+            worksheets: backend.worksheets,
+            activeWorksheetId: backend.active_worksheet_id,
+            queryHistory: backend.query_history.map((item) => ({
+                id: item.id,
+                query: item.query,
+                timestamp: item.timestamp,
+                visualization: item.visualization,
+                success: item.success,
+                error: item.error,
+            })),
+        },
+    };
 }
 
 export async function newProject(): Promise<void> {

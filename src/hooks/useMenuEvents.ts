@@ -23,7 +23,6 @@ import { loadFile, getDataPage } from "../services/fileService";
 export function useMenuEvents() {
     const {
         projectPath,
-        currentVisualization,
         queryHistory,
         setProjectPath,
         setDirty,
@@ -31,13 +30,16 @@ export function useMenuEvents() {
         toggleSidebar,
         toggleAiPanel,
         setDataset,
-        setVisualization,
         setQueryHistory,
         clearDataset,
         setProcessing,
         setError,
         setShowWelcome,
         setSettingsOpen,
+        worksheets,
+        activeWorksheetId,
+        setWorksheets,
+        dataLoaded,
     } = useAppStore();
 
     const { setRowData, clearData: clearDataStore } = useDataStore();
@@ -61,7 +63,7 @@ export function useMenuEvents() {
     const handleOpenProject = useCallback(async () => {
         try {
             setProcessing(true, "Opening project...");
-            const project = await openProject();
+            const { path, project } = await openProject();
             
             if (project.data.sourcePath) {
                 const info = await loadFile(project.data.sourcePath);
@@ -73,16 +75,16 @@ export function useMenuEvents() {
                     fileSize: info.fileSize,
                 });
 
-                // Load the actual row data into the data store
                 const page = await getDataPage(0, 10000, info.columns);
                 setRowData(page.rows, page.totalRows);
             }
             
-            if (project.visualization) {
-                setVisualization(project.visualization);
+            if (project.worksheets && project.worksheets.length > 0 && project.activeWorksheetId) {
+                setWorksheets(project.worksheets, project.activeWorksheetId);
             }
             
             setQueryHistory(project.queryHistory);
+            setProjectPath(path);
             setDirty(false);
         } catch (err) {
             const message = err instanceof Error ? err.message : String(err);
@@ -92,14 +94,24 @@ export function useMenuEvents() {
         } finally {
             setProcessing(false);
         }
-    }, [setDataset, setVisualization, setQueryHistory, setDirty, setProcessing, setError, setRowData]);
+    }, [setDataset, setWorksheets, setQueryHistory, setDirty, setProcessing, setError, setRowData, setProjectPath]);
 
     const handleSave = useCallback(async () => {
         try {
+            if (!dataLoaded) {
+                setError("No data loaded. Please import data or open a project first.");
+                return;
+            }
+            if (!activeWorksheetId) {
+                setError("No active worksheet found.");
+                return;
+            }
+
             setProcessing(true, "Saving project...");
             const path = await saveProject(
                 projectPath,
-                currentVisualization,
+                worksheets,
+                activeWorksheetId!,
                 queryHistory
             );
             setProjectPath(path);
@@ -113,12 +125,21 @@ export function useMenuEvents() {
         } finally {
             setProcessing(false);
         }
-    }, [projectPath, currentVisualization, queryHistory, setProjectPath, setDirty, setProcessing, setError]);
+    }, [projectPath, worksheets, activeWorksheetId, dataLoaded, queryHistory, setProjectPath, setDirty, setProcessing, setError]);
 
     const handleSaveAs = useCallback(async () => {
         try {
+            if (!dataLoaded) {
+                setError("No data loaded. Please import data or open a project first.");
+                return;
+            }
+            if (!activeWorksheetId) {
+                setError("No active worksheet found.");
+                return;
+            }
+            
             setProcessing(true, "Saving project...");
-            const path = await saveProjectAs(currentVisualization, queryHistory);
+            const path = await saveProjectAs(worksheets, activeWorksheetId!, queryHistory);
             setProjectPath(path);
             await addToRecent(path);
             setDirty(false);
@@ -130,7 +151,7 @@ export function useMenuEvents() {
         } finally {
             setProcessing(false);
         }
-    }, [currentVisualization, queryHistory, setProjectPath, setDirty, setProcessing, setError]);
+    }, [worksheets, activeWorksheetId, dataLoaded, queryHistory, setProjectPath, setDirty, setProcessing, setError]);
 
     const handleImportData = useCallback(async () => {
         try {
@@ -291,20 +312,21 @@ export function useMenuEvents() {
     useEffect(() => {
         const handleKeyDown = (e: KeyboardEvent) => {
             const isMod = e.ctrlKey || e.metaKey;
+            const key = e.key.toLowerCase();
 
-            if (isMod && e.key === "s" && !e.shiftKey) {
+            if (isMod && key === "s" && !e.shiftKey) {
                 e.preventDefault();
                 handleSave();
-            } else if (isMod && e.key === "s" && e.shiftKey) {
+            } else if (isMod && key === "s" && e.shiftKey) {
                 e.preventDefault();
                 handleSaveAs();
-            } else if (isMod && e.key === "w") {
+            } else if (isMod && key === "w") {
                 e.preventDefault();
                 handleCloseProject();
-            } else if (isMod && e.key === "n") {
+            } else if (isMod && key === "n") {
                 e.preventDefault();
                 handleNewProject();
-            } else if (isMod && e.key === "o" && !e.shiftKey) {
+            } else if (isMod && key === "o" && !e.shiftKey) {
                 e.preventDefault();
                 handleOpenProject();
             } else if (isMod && e.key === ",") {

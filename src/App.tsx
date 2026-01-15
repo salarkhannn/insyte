@@ -15,11 +15,11 @@ function App() {
         setShowWelcome,
         setSettingsOpen,
         setDataset,
-        setVisualization,
         setQueryHistory,
         setProjectPath,
         setProcessing,
         setError,
+        setWorksheets,
     } = useAppStore();
     const { setRowData } = useDataStore();
     const resetVizBuilder = useVizBuilderStore((state) => state.reset);
@@ -64,7 +64,7 @@ function App() {
     const handleOpenProject = async () => {
         try {
             setProcessing(true, "Opening project...");
-            const project = await openProject();
+            const { path, project } = await openProject();
 
             if (project.data.sourcePath) {
                 const info = await loadFile(project.data.sourcePath);
@@ -80,11 +80,12 @@ function App() {
                 setRowData(page.rows, page.totalRows);
             }
 
-            if (project.visualization) {
-                setVisualization(project.visualization);
+            if (project.worksheets && project.worksheets.length > 0 && project.activeWorksheetId) {
+                setWorksheets(project.worksheets, project.activeWorksheetId);
             }
 
             setQueryHistory(project.queryHistory);
+            setProjectPath(path);
         } catch (err) {
             const message = err instanceof Error ? err.message : String(err);
             if (!message.includes("cancelled")) {
@@ -98,8 +99,7 @@ function App() {
     const handleOpenRecent = async (path: string) => {
         try {
             setProcessing(true, "Opening project...");
-            const project = await openProject(path);
-            setProjectPath(path);
+            const { project } = await openProject(path);
 
             if (project.data.sourcePath) {
                 const info = await loadFile(project.data.sourcePath);
@@ -115,11 +115,12 @@ function App() {
                 setRowData(page.rows, page.totalRows);
             }
 
-            if (project.visualization) {
-                setVisualization(project.visualization);
+            if (project.worksheets && project.worksheets.length > 0 && project.activeWorksheetId) {
+                setWorksheets(project.worksheets, project.activeWorksheetId);
             }
 
             setQueryHistory(project.queryHistory);
+            setProjectPath(path);
         } catch (err) {
             setError(err instanceof Error ? err.message : String(err));
         } finally {

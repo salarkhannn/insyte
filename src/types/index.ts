@@ -130,3 +130,9 @@ export interface ZoomContext {
     /** Selected categories for filtering */
     selectedCategories?: string[];
 }
+
+export interface Worksheet {
+    id: string;
+    name: string;
+    visualization: VisualizationSpec | null;
+}

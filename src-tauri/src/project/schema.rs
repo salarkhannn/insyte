@@ -9,8 +9,27 @@ pub struct InsyteProject {
     pub created_at: DateTime<Utc>,
     pub modified_at: DateTime<Utc>,
     pub data: ProjectData,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub visualization: Option<VisualizationSpec>,
+    #[serde(default)]
+    pub worksheets: Vec<Worksheet>,
+    #[serde(default)]
+    pub active_worksheet_id: Option<String>,
     pub query_history: Vec<QueryHistoryItem>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+pub struct OpenProjectResponse {
+    pub path: String,
+    #[serde(flatten)]
+    pub project: InsyteProject,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Worksheet {
+    pub id: String,
+    pub name: String,
+    pub visualization: Option<VisualizationSpec>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

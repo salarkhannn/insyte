@@ -5,6 +5,7 @@ import { Canvas } from "./Canvas";
 import { StatusBar } from "./StatusBar";
 import { AIChatSidebar } from "../ai";
 import { useMenuEvents } from "../../hooks";
+import { WorksheetBar } from "../worksheets/WorksheetBar";
 
 export function AppShell() {
     useMenuEvents();
@@ -15,7 +16,10 @@ export function AppShell() {
             <div className="flex flex-1 min-h-0">
                 <ActivityBar />
                 <Sidebar />
-                <Canvas />
+                <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
+                    <Canvas />
+                    <WorksheetBar />
+                </div>
                 <AIChatSidebar />
             </div>
             <StatusBar />

@@ -1,15 +1,16 @@
 mod schema;
 
-use crate::ai::types::VisualizationSpec;
 use crate::data::state::AppDataState;
 use crate::error::ProjectError;
 use schema::{
-    DataSourceType, DatasetSchema, InsyteProject, ProjectData, QueryHistoryItem, RecentProject,
+    DataSourceType, DatasetSchema, InsyteProject, OpenProjectResponse, ProjectData,
+    QueryHistoryItem, RecentProject, Worksheet,
 };
 use std::fs;
 use std::path::PathBuf;
 use tauri::State;
 use tauri_plugin_dialog::DialogExt;
+use uuid::Uuid;
 
 fn get_recent_projects_path() -> PathBuf {
     let dirs = directories::ProjectDirs::from("com", "insyte", "Insyte")
@@ -43,7 +44,8 @@ pub async fn save_project(
     app: tauri::AppHandle,
     state: State<'_, AppDataState>,
     path: Option<String>,
-    visualization: Option<VisualizationSpec>,
+    worksheets: Vec<Worksheet>,
+    active_worksheet_id: String,
     query_history: Vec<QueryHistoryItem>,
 ) -> Result<String, ProjectError> {
     let save_path = match path {
@@ -106,7 +108,7 @@ pub async fn save_project(
     };
 
     let project = InsyteProject {
-        version: "1.0".to_string(),
+        version: "1.1".to_string(),
         created_at: chrono::Utc::now(),
         modified_at: chrono::Utc::now(),
         data: ProjectData {
@@ -114,7 +116,9 @@ pub async fn save_project(
             source_path: file_path,
             schema,
         },
-        visualization,
+        visualization: None,
+        worksheets,
+        active_worksheet_id: Some(active_worksheet_id),
         query_history,
     };
 
@@ -133,17 +137,26 @@ pub async fn save_project(
 pub async fn save_project_as(
     app: tauri::AppHandle,
     state: State<'_, AppDataState>,
-    visualization: Option<VisualizationSpec>,
+    worksheets: Vec<Worksheet>,
+    active_worksheet_id: String,
     query_history: Vec<QueryHistoryItem>,
 ) -> Result<String, ProjectError> {
-    save_project(app, state, None, visualization, query_history).await
+    save_project(
+        app,
+        state,
+        None,
+        worksheets,
+        active_worksheet_id,
+        query_history,
+    )
+    .await
 }
 
 #[tauri::command]
 pub async fn open_project(
     app: tauri::AppHandle,
     path: Option<String>,
-) -> Result<InsyteProject, ProjectError> {
+) -> Result<OpenProjectResponse, ProjectError> {
     let open_path = match path {
         Some(p) => PathBuf::from(p),
         None => {
@@ -171,7 +184,7 @@ pub async fn open_project(
     let content =
         fs::read_to_string(&open_path).map_err(|e| ProjectError::ReadError(e.to_string()))?;
 
-    let project: InsyteProject =
+    let mut project: InsyteProject =
         serde_json::from_str(&content).map_err(|e| ProjectError::InvalidFormat(e.to_string()))?;
 
     if !project.version.starts_with("1.") {
@@ -181,10 +194,26 @@ pub async fn open_project(
         });
     }
 
+    // Migration: If no worksheets, migrate legacy visualization
+    if project.worksheets.is_empty() {
+        let sheet_id = Uuid::new_v4().to_string();
+        let viz = project.visualization.clone(); // Clone assuming we keep the deprecated field for now or just take it
+        
+        project.worksheets.push(Worksheet {
+            id: sheet_id.clone(),
+            name: "Sheet 1".to_string(),
+            visualization: viz,
+        });
+        project.active_worksheet_id = Some(sheet_id);
+    }
+
     let path_str = open_path.to_string_lossy().to_string();
     add_to_recent_internal(&path_str, &project);
 
-    Ok(project)
+    Ok(OpenProjectResponse {
+        path: path_str,
+        project,
+    })
 }
 
 #[tauri::command]
