@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Plus, Copy, Edit2, Trash2 } from "lucide-react";
 import { useAppStore } from "../../stores/appStore";
+import { useVizBuilderStore } from "../../stores/vizBuilderStore";
 import { cn } from "../../utils";
 import { Worksheet } from "../../types";
 import * as ContextMenu from "@radix-ui/react-context-menu";
@@ -124,9 +125,27 @@ export function WorksheetBar() {
         duplicateWorksheet,
         removeWorksheet,
     } = useAppStore();
+    
+    const resetVizBuilder = useVizBuilderStore((s) => s.reset);
+    const loadFromSpec = useVizBuilderStore((s) => s.loadFromSpec);
 
     // If no worksheets (should stay synced, but for safety), show at least one
     if (worksheets.length === 0) return null;
+    
+    const handleAddWorksheet = () => {
+        addWorksheet();
+        resetVizBuilder();
+    };
+    
+    const handleActivateWorksheet = (id: string) => {
+        const targetSheet = worksheets.find(ws => ws.id === id);
+        setActiveWorksheet(id);
+        if (targetSheet?.visualization) {
+            loadFromSpec(targetSheet.visualization);
+        } else {
+            resetVizBuilder();
+        }
+    };
 
     return (
         <div className="flex items-center h-8 bg-neutral-100 border-t border-neutral-200 select-none overflow-x-auto overflow-y-hidden">
@@ -136,7 +155,7 @@ export function WorksheetBar() {
                         key={ws.id}
                         worksheet={ws}
                         isActive={ws.id === activeWorksheetId}
-                        onActivate={() => setActiveWorksheet(ws.id)}
+                        onActivate={() => handleActivateWorksheet(ws.id)}
                         onRename={(name) => renameWorksheet(ws.id, name)}
                         onDuplicate={() => duplicateWorksheet(ws.id)}
                         onDelete={() => removeWorksheet(ws.id)}
@@ -145,7 +164,7 @@ export function WorksheetBar() {
             </div>
             
             <button
-                onClick={addWorksheet}
+                onClick={handleAddWorksheet}
                 className="flex items-center justify-center w-8 h-8 text-neutral-500 hover:text-primary hover:bg-neutral-200 transition-colors"
                 title="New Worksheet"
             >
