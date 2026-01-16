@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Send, Loader2, User, Bot, ChevronRight, ChevronLeft, Trash2, BarChart3, MessageSquare } from "lucide-react";
+import { Send, Loader2, User, Bot, ChevronRight, Trash2, BarChart3, MessageSquare } from "lucide-react";
 import { useAppStore } from "../../stores/appStore";
 import { useQueryStore } from "../../stores/queryStore";
 import { useVizBuilderStore } from "../../stores/vizBuilderStore";
@@ -166,26 +166,8 @@ export function AIChatSidebar() {
         setMessages([]);
     };
 
-    if (aiPanelCollapsed) {
-        return (
-            <div className="w-12 bg-neutral-50 border-l border-neutral-200 flex flex-col items-center py-4">
-                <button
-                    onClick={() => setAiPanelCollapsed(false)}
-                    className="p-2 rounded hover:bg-neutral-100 text-neutral-500"
-                    title="Open AI Chat (Ctrl+/)"
-                    aria-label="Open AI Chat panel"
-                >
-                    <ChevronLeft size={18} />
-                </button>
-                <div className="mt-4 p-2 rounded bg-neutral-700 text-white">
-                    <MessageSquare size={16} />
-                </div>
-            </div>
-        );
-    }
-
     return (
-        <div className="w-80 bg-white border-l border-neutral-200 flex flex-col">
+        <div className="w-full h-full bg-white border-l border-neutral-200 flex flex-col">
             <header className="h-12 px-3 flex items-center justify-between border-b border-neutral-200 bg-neutral-50 shrink-0">
                 <div className="flex items-center gap-2">
                     <MessageSquare size={16} className="text-neutral-600" />
