@@ -1,6 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
 import { RefreshCw, Maximize2, Minimize2, Download, Loader2, AlertCircle, Info, AlertTriangle } from "lucide-react";
-import { useAppStore } from "../../stores/appStore";
 import { useChartConfigStore } from "../../stores/chartConfigStore";
 import { executeVisualizationQuery, executeScatterQuery } from "../../services/aiService";
 import { menuService } from "../../services/menuService";
@@ -53,17 +52,19 @@ export function ChartContainer({ spec }: ChartContainerProps) {
     const [isFullscreen, setIsFullscreen] = useState(false);
     const [showReductionDetails, setShowReductionDetails] = useState(false);
 
-    const { setProcessing } = useAppStore();
-    // Subscribe to chart config store for real-time updates
     const chartConfig = useChartConfigStore((state) => state.config);
+
+    useEffect(() => {
+        setChartData(null);
+        setError(null);
+        setIsLoading(true);
+    }, [spec]);
 
     const fetchData = useCallback(async () => {
         setIsLoading(true);
         setError(null);
-        setProcessing(true, "Loading chart data...");
 
         try {
-            // Use scatter-specific query for scatter plots (with sampling)
             const data = spec.chartType === "scatter"
                 ? await executeScatterQuery(spec)
                 : await executeVisualizationQuery(spec);
@@ -72,9 +73,8 @@ export function ChartContainer({ spec }: ChartContainerProps) {
             setError(err instanceof Error ? err.message : String(err));
         } finally {
             setIsLoading(false);
-            setProcessing(false);
         }
-    }, [spec, setProcessing]);
+    }, [spec]);
 
     useEffect(() => {
         fetchData();

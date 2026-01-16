@@ -19,6 +19,7 @@ function ActivityButton({ icon, onClick, active, title }: ActivityButtonProps) {
                 active && "text-neutral-900 bg-neutral-200"
             )}
             title={title}
+            aria-label={title}
         >
             {icon}
         </button>

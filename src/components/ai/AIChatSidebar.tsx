@@ -19,12 +19,11 @@ interface ChatMessage {
 export function AIChatSidebar() {
     const [messages, setMessages] = useState<ChatMessage[]>([]);
     const [input, setInput] = useState("");
+    const [isLoading, setIsLoading] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLTextAreaElement>(null);
 
     const { 
-        isProcessing, 
-        setProcessing, 
         setVisualization, 
         setActiveView, 
         dataLoaded,
@@ -56,7 +55,7 @@ export function AIChatSidebar() {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!input.trim() || isProcessing || !dataLoaded) return;
+        if (!input.trim() || isLoading || !dataLoaded) return;
 
         const userMessage: ChatMessage = {
             id: generateId(),
@@ -67,7 +66,7 @@ export function AIChatSidebar() {
 
         setMessages((prev) => [...prev, userMessage]);
         setInput("");
-        setProcessing(true, "Analyzing your request...");
+        setIsLoading(true);
 
         try {
             const spec = await processAiQuery(userMessage.content);
@@ -110,7 +109,7 @@ export function AIChatSidebar() {
                 error: errorMessage,
             });
         } finally {
-            setProcessing(false);
+            setIsLoading(false);
         }
     };
 
@@ -138,6 +137,7 @@ export function AIChatSidebar() {
                     onClick={() => setAiPanelCollapsed(false)}
                     className="p-2.5 rounded hover:bg-neutral-200 text-neutral-600 transition-colors"
                     title="Open AI Chat (Ctrl+/)"
+                    aria-label="Open AI Chat panel"
                 >
                     <ChevronLeft size={18} />
                 </button>
@@ -163,6 +163,7 @@ export function AIChatSidebar() {
                             onClick={clearChat}
                             className="p-2 rounded hover:bg-neutral-200/50 text-neutral-500 transition-colors"
                             title="Clear chat"
+                            aria-label="Clear chat history"
                         >
                             <Trash2 size={16} />
                         </button>
@@ -171,6 +172,7 @@ export function AIChatSidebar() {
                         onClick={() => setAiPanelCollapsed(true)}
                         className="p-2 rounded hover:bg-neutral-200/50 text-neutral-500 transition-colors"
                         title="Collapse"
+                        aria-label="Collapse AI Chat panel"
                     >
                         <ChevronRight size={16} />
                     </button>
@@ -255,7 +257,7 @@ export function AIChatSidebar() {
                         </div>
                     ))
                 )}
-                {isProcessing && (
+                {isLoading && (
                     <div className="flex gap-3">
                         <div className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 bg-gradient-to-br from-violet-500 to-indigo-600 text-white">
                             <Loader2 size={14} className="animate-spin" />
@@ -281,8 +283,10 @@ export function AIChatSidebar() {
                         onChange={(e) => setInput(e.target.value)}
                         onKeyDown={handleKeyDown}
                         placeholder={dataLoaded ? "Ask about your data..." : "Load data first..."}
-                        disabled={!dataLoaded || isProcessing}
+                        disabled={!dataLoaded || isLoading}
                         rows={1}
+                        data-ai-input="true"
+                        aria-label="AI query input"
                         className={cn(
                             "flex-1 bg-transparent outline-none text-sm text-neutral-700 resize-none",
                             "placeholder:text-neutral-400 disabled:cursor-not-allowed",
@@ -297,15 +301,16 @@ export function AIChatSidebar() {
                     />
                     <button
                         type="submit"
-                        disabled={!input.trim() || isProcessing || !dataLoaded}
+                        disabled={!input.trim() || isLoading || !dataLoaded}
+                        aria-label="Send message"
                         className={cn(
                             "w-8 h-8 rounded-md flex items-center justify-center transition-all shrink-0",
-                            input.trim() && dataLoaded && !isProcessing
+                            input.trim() && dataLoaded && !isLoading
                                 ? "bg-gradient-to-br from-violet-500 to-indigo-600 text-white hover:from-violet-600 hover:to-indigo-700 shadow-sm"
                                 : "bg-neutral-200 text-neutral-400 cursor-not-allowed"
                         )}
                     >
-                        {isProcessing ? (
+                        {isLoading ? (
                             <Loader2 size={16} className="animate-spin" />
                         ) : (
                             <Send size={16} />

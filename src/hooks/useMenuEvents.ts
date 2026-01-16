@@ -1,5 +1,6 @@
 import { useEffect, useCallback } from "react";
 import { open } from "@tauri-apps/plugin-dialog";
+import toast from "react-hot-toast";
 import { useAppStore } from "../stores/appStore";
 import { useDataStore } from "../stores/dataStore";
 import { useVizBuilderStore } from "../stores/vizBuilderStore";
@@ -99,11 +100,11 @@ export function useMenuEvents() {
     const handleSave = useCallback(async () => {
         try {
             if (!dataLoaded) {
-                setError("No data loaded. Please import data or open a project first.");
+                toast.error("No data loaded. Please import data or open a project first.");
                 return;
             }
             if (!activeWorksheetId) {
-                setError("No active worksheet found.");
+                toast.error("No active worksheet found.");
                 return;
             }
 
@@ -117,24 +118,25 @@ export function useMenuEvents() {
             setProjectPath(path);
             await addToRecent(path);
             setDirty(false);
+            toast.success("Project saved");
         } catch (err) {
             const message = err instanceof Error ? err.message : String(err);
             if (!message.includes("cancelled")) {
-                setError(message);
+                toast.error(message);
             }
         } finally {
             setProcessing(false);
         }
-    }, [projectPath, worksheets, activeWorksheetId, dataLoaded, queryHistory, setProjectPath, setDirty, setProcessing, setError]);
+    }, [projectPath, worksheets, activeWorksheetId, dataLoaded, queryHistory, setProjectPath, setDirty, setProcessing]);
 
     const handleSaveAs = useCallback(async () => {
         try {
             if (!dataLoaded) {
-                setError("No data loaded. Please import data or open a project first.");
+                toast.error("No data loaded. Please import data or open a project first.");
                 return;
             }
             if (!activeWorksheetId) {
-                setError("No active worksheet found.");
+                toast.error("No active worksheet found.");
                 return;
             }
             
@@ -143,15 +145,16 @@ export function useMenuEvents() {
             setProjectPath(path);
             await addToRecent(path);
             setDirty(false);
+            toast.success("Project saved");
         } catch (err) {
             const message = err instanceof Error ? err.message : String(err);
             if (!message.includes("cancelled")) {
-                setError(message);
+                toast.error(message);
             }
         } finally {
             setProcessing(false);
         }
-    }, [worksheets, activeWorksheetId, dataLoaded, queryHistory, setProjectPath, setDirty, setProcessing, setError]);
+    }, [worksheets, activeWorksheetId, dataLoaded, queryHistory, setProjectPath, setDirty, setProcessing]);
 
     const handleImportData = useCallback(async () => {
         try {
@@ -203,45 +206,48 @@ export function useMenuEvents() {
             setProcessing(true, "Exporting CSV...");
             const { exportCsv } = await import("../services/exportService");
             await exportCsv();
+            toast.success("CSV exported successfully");
         } catch (err) {
             const message = err instanceof Error ? err.message : String(err);
             if (!message.includes("cancelled")) {
-                setError(message);
+                toast.error(message);
             }
         } finally {
             setProcessing(false);
         }
-    }, [setProcessing, setError]);
+    }, [setProcessing]);
 
     const handleExportExcel = useCallback(async () => {
         try {
             setProcessing(true, "Exporting Excel...");
             const { exportExcel } = await import("../services/exportService");
             await exportExcel();
+            toast.success("Excel exported successfully");
         } catch (err) {
             const message = err instanceof Error ? err.message : String(err);
             if (!message.includes("cancelled")) {
-                setError(message);
+                toast.error(message);
             }
         } finally {
             setProcessing(false);
         }
-    }, [setProcessing, setError]);
+    }, [setProcessing]);
 
     const handleExportChart = useCallback(async () => {
         try {
             setProcessing(true, "Exporting chart...");
             const { exportChartAsPng } = await import("../services/exportService");
             await exportChartAsPng();
+            toast.success("Chart exported successfully");
         } catch (err) {
             const message = err instanceof Error ? err.message : String(err);
             if (!message.includes("cancelled")) {
-                setError(message);
+                toast.error(message);
             }
         } finally {
             setProcessing(false);
         }
-    }, [setProcessing, setError]);
+    }, [setProcessing]);
 
     useEffect(() => {
         const handleMenuEvent = (menuId: MenuEventId) => {
@@ -314,6 +320,12 @@ export function useMenuEvents() {
             const isMod = e.ctrlKey || e.metaKey;
             const key = e.key.toLowerCase();
 
+            // Handle Escape for closing dialogs
+            if (e.key === "Escape") {
+                setSettingsOpen(false);
+                return;
+            }
+
             if (isMod && key === "s" && !e.shiftKey) {
                 e.preventDefault();
                 handleSave();
@@ -329,6 +341,20 @@ export function useMenuEvents() {
             } else if (isMod && key === "o" && !e.shiftKey) {
                 e.preventDefault();
                 handleOpenProject();
+            } else if (isMod && key === "e") {
+                // Ctrl+E: Export - trigger CSV export as default
+                e.preventDefault();
+                handleExportCsv();
+            } else if (isMod && e.key === "/") {
+                // Ctrl+/: Focus AI query input
+                e.preventDefault();
+                const aiInput = document.querySelector('[data-ai-input="true"]') as HTMLInputElement;
+                if (aiInput) {
+                    aiInput.focus();
+                } else {
+                    // If AI panel is collapsed, open it first
+                    toggleAiPanel();
+                }
             } else if (isMod && e.key === ",") {
                 e.preventDefault();
                 setSettingsOpen(true);
@@ -337,5 +363,5 @@ export function useMenuEvents() {
 
         document.addEventListener("keydown", handleKeyDown);
         return () => document.removeEventListener("keydown", handleKeyDown);
-    }, [handleSave, handleSaveAs, handleCloseProject, handleNewProject, handleOpenProject, setSettingsOpen]);
+    }, [handleSave, handleSaveAs, handleCloseProject, handleNewProject, handleOpenProject, handleExportCsv, toggleAiPanel, setSettingsOpen]);
 }

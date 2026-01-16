@@ -6,23 +6,26 @@ import { StatusBar } from "./StatusBar";
 import { AIChatSidebar } from "../ai";
 import { useMenuEvents } from "../../hooks";
 import { WorksheetBar } from "../worksheets/WorksheetBar";
+import { ErrorBoundary } from "../common";
 
 export function AppShell() {
     useMenuEvents();
 
     return (
-        <div className="h-screen flex flex-col bg-canvas">
-            <TitleBar />
-            <div className="flex flex-1 min-h-0">
-                <ActivityBar />
-                <Sidebar />
-                <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
-                    <Canvas />
-                    <WorksheetBar />
+        <ErrorBoundary>
+            <div className="h-screen flex flex-col bg-canvas">
+                <TitleBar />
+                <div className="flex flex-1 min-h-0">
+                    <ActivityBar />
+                    <Sidebar />
+                    <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
+                        <Canvas />
+                        <WorksheetBar />
+                    </div>
+                    <AIChatSidebar />
                 </div>
-                <AIChatSidebar />
+                <StatusBar />
             </div>
-            <StatusBar />
-        </div>
+        </ErrorBoundary>
     );
 }
