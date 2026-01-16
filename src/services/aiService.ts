@@ -1,5 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
-import type { VisualizationSpec, ChartData, TableData, FilterSpec, ReductionReason } from "../types";
+import type { VisualizationSpec, ChartData, TableData, FilterSpec, ReductionReason, AIChatResponse, DataInsight } from "../types";
 
 interface BackendVisualizationSpec {
     chartType: "bar" | "line" | "area" | "pie" | "scatter";
@@ -170,6 +170,40 @@ function transformSettingsToBackend(settings: AppSettings): BackendSettings {
 export async function processAiQuery(query: string): Promise<VisualizationSpec> {
     const spec = await invoke<BackendVisualizationSpec>("process_ai_query", { query });
     return transformVisualizationSpec(spec);
+}
+
+interface BackendChatResponse {
+    type: "visualization" | "answer" | "error";
+    spec?: BackendVisualizationSpec;
+    explanation?: string;
+    content?: string;
+    insights?: DataInsight[];
+    message?: string;
+}
+
+export async function processAiChat(query: string): Promise<AIChatResponse> {
+    const response = await invoke<BackendChatResponse>("process_ai_chat", { query });
+
+    if (response.type === "visualization" && response.spec) {
+        return {
+            type: "visualization",
+            spec: transformVisualizationSpec(response.spec),
+            explanation: response.explanation ?? "",
+        };
+    }
+
+    if (response.type === "answer") {
+        return {
+            type: "answer",
+            content: response.content ?? "",
+            insights: response.insights,
+        };
+    }
+
+    return {
+        type: "error",
+        message: response.message ?? "Unknown error occurred",
+    };
 }
 
 /**

@@ -1,10 +1,11 @@
 use crate::ai::groq::GroqClient;
-use crate::ai::prompts::build_visualization_prompt;
-use crate::ai::types::VisualizationSpec;
+use crate::ai::prompts::{build_chat_prompt, build_visualization_prompt};
+use crate::ai::types::{AIChatResponse, DataInsight, VisualizationSpec};
 use crate::data::state::AppDataState;
 use crate::data::types::ColumnInfo;
 use crate::error::AIError;
 use crate::settings::AppSettings;
+use serde::Deserialize;
 use tauri::State;
 
 fn validate_spec(spec: &VisualizationSpec, columns: &[ColumnInfo]) -> Result<(), AIError> {
@@ -127,3 +128,110 @@ pub async fn process_ai_query(
 
     Ok(spec)
 }
+
+#[derive(Deserialize)]
+struct RawChatResponse {
+    intent: String,
+    #[serde(default)]
+    spec: Option<VisualizationSpec>,
+    #[serde(default)]
+    explanation: Option<String>,
+    #[serde(default)]
+    answer: Option<String>,
+    #[serde(default)]
+    insights: Option<Vec<DataInsight>>,
+}
+
+fn extract_sample_rows(
+    state: &AppDataState,
+    max_rows: usize,
+) -> Result<(Vec<ColumnInfo>, usize, Vec<Vec<String>>), AIError> {
+    let data_state = state
+        .lock()
+        .map_err(|e| AIError::RequestFailed(e.to_string()))?;
+
+    let df = data_state
+        .get_dataframe()
+        .ok_or_else(|| AIError::RequestFailed("No data loaded".to_string()))?;
+
+    let columns: Vec<ColumnInfo> = df
+        .get_columns()
+        .iter()
+        .map(|col| ColumnInfo {
+            name: col.name().to_string(),
+            dtype: format!("{:?}", col.dtype()),
+            nullable: true,
+        })
+        .collect();
+
+    let row_count = df.height();
+    let sample_count = std::cmp::min(max_rows, row_count);
+
+    let mut sample_rows: Vec<Vec<String>> = Vec::with_capacity(sample_count);
+    for i in 0..sample_count {
+        let row: Vec<String> = df
+            .get_columns()
+            .iter()
+            .map(|col| {
+                col.get(i)
+                    .map(|v| format!("{}", v))
+                    .unwrap_or_else(|_| String::from("null"))
+            })
+            .collect();
+        sample_rows.push(row);
+    }
+
+    Ok((columns, row_count, sample_rows))
+}
+
+#[tauri::command]
+pub async fn process_ai_chat(
+    query: String,
+    state: State<'_, AppDataState>,
+) -> Result<AIChatResponse, AIError> {
+    let api_key = get_api_key()?;
+    let model = get_model();
+
+    let (columns, row_count, sample_rows) = extract_sample_rows(&state, 5)?;
+
+    let prompt = build_chat_prompt(&query, &columns, row_count, &sample_rows);
+
+    let client = GroqClient::new(api_key).with_model(model);
+    let response = client.complete(prompt).await?;
+
+    let json_str = extract_json(&response)
+        .ok_or_else(|| AIError::ParseError("No valid JSON found in response".to_string()))?;
+
+    let raw: RawChatResponse =
+        serde_json::from_str(json_str).map_err(|e| AIError::ParseError(e.to_string()))?;
+
+    match raw.intent.as_str() {
+        "visualization" => {
+            let spec = raw.spec.ok_or_else(|| {
+                AIError::ParseError("Missing visualization spec in response".to_string())
+            })?;
+
+            validate_spec(&spec, &columns)?;
+
+            let explanation = raw
+                .explanation
+                .unwrap_or_else(|| format!("{} showing {} by {}.", spec.title, spec.y_field, spec.x_field));
+
+            Ok(AIChatResponse::Visualization { spec, explanation })
+        }
+        "question" => {
+            let content = raw.answer.ok_or_else(|| {
+                AIError::ParseError("Missing answer in response".to_string())
+            })?;
+
+            Ok(AIChatResponse::Answer {
+                content,
+                insights: raw.insights,
+            })
+        }
+        _ => Ok(AIChatResponse::Error {
+            message: format!("Unknown intent: {}", raw.intent),
+        }),
+    }
+}
+

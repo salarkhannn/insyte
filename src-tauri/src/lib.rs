@@ -5,7 +5,7 @@ mod export;
 mod project;
 mod settings;
 
-use ai::process_ai_query;
+use ai::{process_ai_chat, process_ai_query};
 use data::ingest::{clear_data, get_data_page, list_excel_sheets, load_csv, load_excel, load_json};
 use data::state::AppDataState;
 use data::{
@@ -39,6 +39,7 @@ pub fn run() {
             set_api_key,
             validate_api_key,
             process_ai_query,
+            process_ai_chat,
             execute_visualization_query,
             execute_scatter_query,
             execute_table_query,

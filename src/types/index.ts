@@ -136,3 +136,13 @@ export interface Worksheet {
     name: string;
     visualization: VisualizationSpec | null;
 }
+
+export interface DataInsight {
+    label: string;
+    value: string;
+}
+
+export type AIChatResponse =
+    | { type: "visualization"; spec: VisualizationSpec; explanation: string }
+    | { type: "answer"; content: string; insights?: DataInsight[] }
+    | { type: "error"; message: string };

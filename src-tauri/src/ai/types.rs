@@ -76,3 +76,28 @@ pub enum FilterOperator {
     IsNull,
     IsNotNull,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct DataInsight {
+    pub label: String,
+    pub value: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase", tag = "type")]
+pub enum AIChatResponse {
+    #[serde(rename = "visualization")]
+    Visualization {
+        spec: VisualizationSpec,
+        explanation: String,
+    },
+    #[serde(rename = "answer")]
+    Answer {
+        content: String,
+        #[serde(skip_serializing_if = "Option::is_none")]
+        insights: Option<Vec<DataInsight>>,
+    },
+    #[serde(rename = "error")]
+    Error { message: String },
+}
