@@ -114,4 +114,4 @@ MIT
 
 ---
 
-Built by [Salar](https://github.com/insyte-labs)
+Built by [Salar](https://github.com/salarkhannn)
