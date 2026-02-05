@@ -74,6 +74,7 @@ export function useMenuEvents() {
                     columns: info.columns,
                     rowCount: info.rowCount,
                     fileSize: info.fileSize,
+                    tables: info.tables,
                 });
 
                 const page = await getDataPage(0, 10000, info.columns);
@@ -174,12 +175,14 @@ export function useMenuEvents() {
                 resetVizBuilder();
                 
                 const info = await loadFile(selected);
+
                 setDataset({
                     fileName: info.fileName,
                     filePath: info.filePath,
                     columns: info.columns,
                     rowCount: info.rowCount,
                     fileSize: info.fileSize,
+                    tables: info.tables,
                 });
 
                 const page = await getDataPage(0, 10000, info.columns);
@@ -234,10 +237,21 @@ export function useMenuEvents() {
     }, [setProcessing]);
 
     const handleExportChart = useCallback(async () => {
+        const { currentVisualization, rowCount } = useAppStore.getState();
+        if (!currentVisualization) {
+            toast.error("No chart to export");
+            return;
+        }
+
         try {
             setProcessing(true, "Exporting chart...");
-            const { exportChartAsPng } = await import("../services/exportService");
-            await exportChartAsPng();
+            const { exportChart } = await import("../services/exportService");
+            await exportChart(
+                currentVisualization.title || "Visualization",
+                rowCount,
+                currentVisualization.xField,
+                currentVisualization.yField
+            );
             toast.success("Chart exported successfully");
         } catch (err) {
             const message = err instanceof Error ? err.message : String(err);

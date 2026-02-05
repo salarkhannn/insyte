@@ -43,12 +43,14 @@ function App() {
                 resetVizBuilder();
                 
                 const info = await loadFile(selected);
+
                 setDataset({
                     fileName: info.fileName,
                     filePath: info.filePath,
                     columns: info.columns,
                     rowCount: info.rowCount,
                     fileSize: info.fileSize,
+                    tables: info.tables,
                 });
 
                 const page = await getDataPage(0, 10000, info.columns);
@@ -74,6 +76,7 @@ function App() {
                     columns: info.columns,
                     rowCount: info.rowCount,
                     fileSize: info.fileSize,
+                    tables: info.tables,
                 });
 
                 const page = await getDataPage(0, 10000, info.columns);
@@ -109,6 +112,7 @@ function App() {
                     columns: info.columns,
                     rowCount: info.rowCount,
                     fileSize: info.fileSize,
+                    tables: info.tables,
                 });
 
                 const page = await getDataPage(0, 10000, info.columns);

@@ -97,7 +97,7 @@ pub async fn process_ai_query(
             .map_err(|e| AIError::RequestFailed(e.to_string()))?;
 
         let df = data_state
-            .get_dataframe()
+            .get_active_dataframe()
             .ok_or_else(|| AIError::RequestFailed("No data loaded".to_string()))?;
 
         let cols: Vec<ColumnInfo> = df
@@ -151,7 +151,7 @@ fn extract_sample_rows(
         .map_err(|e| AIError::RequestFailed(e.to_string()))?;
 
     let df = data_state
-        .get_dataframe()
+        .get_active_dataframe()
         .ok_or_else(|| AIError::RequestFailed("No data loaded".to_string()))?;
 
     let columns: Vec<ColumnInfo> = df

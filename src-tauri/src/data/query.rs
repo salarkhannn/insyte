@@ -436,7 +436,7 @@ pub async fn execute_visualization_query(
         .lock()
         .map_err(|e| DataError::ParseError(format!("Failed to acquire data lock: {}", e)))?;
 
-    let df = data_state.get_dataframe().ok_or(DataError::NoData)?.clone();
+    let df = data_state.get_active_dataframe().ok_or(DataError::NoData)?.clone();
 
     let total_records = df.height();
 
@@ -471,7 +471,7 @@ pub async fn execute_visualization_query(
         .column(&spec.x_field)
         .map_err(|e| DataError::ParseError(e.to_string()))?;
 
-    let x_cardinality = estimate_cardinality(x_series, total_records);
+    let _x_cardinality = estimate_cardinality(x_series, total_records);
 
     // === STEP 4: DETERMINE CHART-SPECIFIC LIMITS ===
     let chart_type_str = format!("{:?}", spec.chart_type).to_lowercase();
@@ -480,7 +480,7 @@ pub async fn execute_visualization_query(
     // Track reduction metadata for user feedback
     let mut reduced = false;
     let mut reduction_reason = "none".to_string();
-    let mut sample_ratio: Option<f64> = None;
+    let sample_ratio: Option<f64> = None;
     let mut top_n_value: Option<usize> = None;
     let mut warning_message: Option<String> = None;
 
@@ -605,7 +605,7 @@ pub async fn execute_scatter_query(
         .lock()
         .map_err(|e| DataError::ParseError(format!("Failed to acquire data lock: {}", e)))?;
 
-    let df = data_state.get_dataframe().ok_or(DataError::NoData)?.clone();
+    let df = data_state.get_active_dataframe().ok_or(DataError::NoData)?.clone();
     let total_records = df.height();
 
     // Validate columns
@@ -649,16 +649,15 @@ pub async fn execute_scatter_query(
     // Track reduction metadata
     let mut reduced = false;
     let mut reduction_reason = "none".to_string();
-    let mut sample_ratio: Option<f64> = None;
     let mut warning_message: Option<String> = None;
 
     // Apply sampling if needed
-    let result_df = if filtered_count > SCATTER_MAX_POINTS {
+    let (result_df, sample_ratio) = if filtered_count > SCATTER_MAX_POINTS {
         reduced = true;
         reduction_reason = "sampling".to_string();
 
         let ratio = SCATTER_MAX_POINTS as f64 / filtered_count as f64;
-        sample_ratio = Some(ratio);
+        let sample_ratio = Some(ratio);
 
         warning_message = Some(format!(
             "Showing {:.1}% sample ({} of {} points) for performance",
@@ -670,9 +669,9 @@ pub async fn execute_scatter_query(
         // Use deterministic sampling
         let sample_result = scatter_sample(filtered_df.lazy(), filtered_count, SCATTER_MAX_POINTS)?;
 
-        sample_result.data
+        (sample_result.data, sample_ratio)
     } else {
-        filtered_df
+        (filtered_df, None)
     };
 
     let returned_points = result_df.height();
@@ -752,7 +751,7 @@ pub async fn execute_table_query(
         .lock()
         .map_err(|e| DataError::ParseError(format!("Failed to acquire data lock: {}", e)))?;
 
-    let df = data_state.get_dataframe().ok_or(DataError::NoData)?.clone();
+    let df = data_state.get_active_dataframe().ok_or(DataError::NoData)?.clone();
     let total_records = df.height();
 
     // SAFETY: Cap page size at 1000 rows
@@ -883,7 +882,7 @@ pub async fn execute_progressive_query(
     // Calculate point limit based on zoom level
     // At zoom 0.0, show 20% of base limit
     // At zoom 1.0, show full base limit
-    let point_limit = zoom.calculate_point_limit(base_max_points);
+    let _point_limit = zoom.calculate_point_limit(base_max_points);
 
     // Modify spec with range filters if provided
     let mut modified_spec = spec.clone();

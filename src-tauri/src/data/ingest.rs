@@ -1,7 +1,7 @@
 use crate::data::state::AppDataState;
 use crate::data::types::{ColumnInfo, DataPage, DatasetInfo};
 use crate::error::DataError;
-use calamine::{open_workbook, Reader, Xlsx};
+use calamine::{open_workbook, Reader, Xlsx, Data as CalamineData};
 use polars::prelude::*;
 use std::fs;
 use std::path::Path;
@@ -110,7 +110,12 @@ pub async fn load_csv(
     let mut data_state = state
         .lock()
         .map_err(|e| DataError::ParseError(e.to_string()))?;
-    data_state.set_dataframe(df, path.clone());
+    
+    data_state.clear();
+    let table_name = "default".to_string();
+    data_state.add_dataframe(table_name.clone(), df);
+    data_state.set_active_table(table_name.clone()).map_err(|e| DataError::ParseError(e))?;
+    data_state.set_file_path(path.clone());
 
     Ok(DatasetInfo {
         file_name,
@@ -118,6 +123,7 @@ pub async fn load_csv(
         file_size,
         row_count,
         columns,
+        tables: vec![table_name],
     })
 }
 
@@ -149,7 +155,12 @@ pub async fn load_json(
     let mut data_state = state
         .lock()
         .map_err(|e| DataError::ParseError(e.to_string()))?;
-    data_state.set_dataframe(df, path.clone());
+    
+    data_state.clear();
+    let table_name = "default".to_string();
+    data_state.add_dataframe(table_name.clone(), df);
+    data_state.set_active_table(table_name.clone()).map_err(|e| DataError::ParseError(e))?;
+    data_state.set_file_path(path.clone());
 
     Ok(DatasetInfo {
         file_name,
@@ -157,6 +168,7 @@ pub async fn load_json(
         file_size,
         row_count,
         columns,
+        tables: vec![table_name],
     })
 }
 
@@ -177,7 +189,6 @@ pub async fn list_excel_sheets(path: String) -> Result<Vec<String>, DataError> {
 #[tauri::command]
 pub async fn load_excel(
     path: String,
-    sheet: Option<String>,
     state: State<'_, AppDataState>,
 ) -> Result<DatasetInfo, DataError> {
     let file_path = Path::new(&path);
@@ -197,54 +208,144 @@ pub async fn load_excel(
     let mut workbook: Xlsx<_> = open_workbook(&path)?;
     let sheets = workbook.sheet_names().to_vec();
 
-    let sheet_name = match sheet {
-        Some(s) => {
-            if sheets.contains(&s) {
-                s
-            } else {
-                return Err(DataError::InvalidSheet(s));
-            }
-        }
-        None => sheets.first().cloned().ok_or(DataError::NoData)?,
-    };
-
-    let range = workbook
-        .worksheet_range(&sheet_name)
-        .map_err(|e| DataError::ReadError(e.to_string()))?;
-
-    let mut headers: Vec<String> = Vec::new();
-    let mut data: Vec<Vec<String>> = Vec::new();
-
-    for (i, row) in range.rows().enumerate() {
-        if i == 0 {
-            headers = row.iter().map(|c| c.to_string()).collect();
-        } else {
-            let row_data: Vec<String> = row.iter().map(|c| c.to_string()).collect();
-            data.push(row_data);
-        }
-    }
-
-    if headers.is_empty() {
+    if sheets.is_empty() {
         return Err(DataError::NoData);
     }
-
-    let mut columns_data: Vec<Series> = Vec::new();
-    for (idx, header) in headers.iter().enumerate() {
-        let col_values: Vec<Option<String>> =
-            data.iter().map(|row| row.get(idx).cloned()).collect();
-
-        let series = Series::new(header.into(), col_values);
-        columns_data.push(series);
-    }
-
-    let df = DataFrame::new(columns_data).map_err(|e| DataError::ParseError(e.to_string()))?;
-    let columns = df_to_columns(&df);
-    let row_count = df.height();
 
     let mut data_state = state
         .lock()
         .map_err(|e| DataError::ParseError(e.to_string()))?;
-    data_state.set_dataframe(df, path.clone());
+    
+    data_state.clear();
+    data_state.set_file_path(path.clone());
+
+    let mut first_valid_sheet: Option<(String, usize, Vec<ColumnInfo>)> = None;
+    let mut loaded_tables = Vec::new();
+
+    for sheet_name in sheets {
+        let range_result = workbook.worksheet_range(&sheet_name);
+        if let Ok(range) = range_result {
+            let mut headers: Vec<String> = Vec::new();
+            let mut data: Vec<Vec<CalamineData>> = Vec::new();
+
+            for (i, row) in range.rows().enumerate() {
+                if i == 0 {
+                    headers = row.iter().map(|c| c.to_string()).collect();
+                } else {
+                    data.push(row.to_vec());
+                }
+            }
+
+            if !headers.is_empty() {
+                let mut columns_data: Vec<Series> = Vec::new();
+                for (idx, header) in headers.iter().enumerate() {
+                    let col_data: Vec<&CalamineData> = data.iter().map(|row| &row[idx]).collect();
+                    
+                    let mut has_string = false;
+                    let mut has_float = false;
+                    let mut has_bool = false;
+                    
+                    for val in &col_data {
+                        match val {
+                            CalamineData::String(_) => has_string = true,
+                            CalamineData::Float(_) | CalamineData::Int(_) => has_float = true,
+                            CalamineData::Bool(_) => has_bool = true,
+                            _ => {}
+                        }
+                    }
+
+                    let series = if has_string {
+                        let values: Vec<Option<String>> = col_data.iter().map(|v| match v {
+                            CalamineData::String(s) => Some(s.clone()),
+                            CalamineData::Int(i) => Some(i.to_string()),
+                            CalamineData::Float(f) => Some(f.to_string()),
+                            CalamineData::Bool(b) => Some(b.to_string()),
+                            CalamineData::DateTime(f) => Some(f.to_string()),
+                            _ => None,
+                        }).collect();
+                        Series::new(header.into(), values)
+                    } else if has_float {
+                        let values: Vec<Option<f64>> = col_data.iter().map(|v| match v {
+                            CalamineData::Int(i) => Some(*i as f64),
+                            CalamineData::Float(f) => Some(*f),
+                            CalamineData::DateTime(dt) => Some(dt.as_f64()),
+                            _ => None,
+                        }).collect();
+                        Series::new(header.into(), values)
+                    } else if has_bool {
+                        let values: Vec<Option<bool>> = col_data.iter().map(|v| match v {
+                            CalamineData::Bool(b) => Some(*b),
+                            _ => None,
+                        }).collect();
+                        Series::new(header.into(), values)
+                    } else {
+                        Series::new_null(header.into(), col_data.len())
+                    };
+
+                    columns_data.push(series);
+                }
+
+                if let Ok(df) = DataFrame::new(columns_data) {
+                    let row_count = df.height();
+                    let columns = df_to_columns(&df);
+                    
+                    data_state.add_dataframe(sheet_name.clone(), df);
+                    loaded_tables.push(sheet_name.clone());
+
+                    if first_valid_sheet.is_none() {
+                        first_valid_sheet = Some((sheet_name.clone(), row_count, columns));
+                    }
+                }
+            }
+        }
+    }
+
+    if let Some((first_sheet_name, row_count, columns)) = first_valid_sheet {
+         data_state.set_active_table(first_sheet_name).map_err(|e| DataError::ParseError(e))?;
+
+         Ok(DatasetInfo {
+            file_name,
+            file_path: path,
+            file_size,
+            row_count,
+            columns,
+            tables: loaded_tables,
+        })
+    } else {
+        Err(DataError::NoData)
+    }
+}
+
+#[tauri::command]
+pub async fn set_active_table(
+    table_name: String,
+    state: State<'_, AppDataState>,
+) -> Result<DatasetInfo, DataError> {
+    let mut data_state = state
+        .lock()
+        .map_err(|e| DataError::ParseError(e.to_string()))?;
+
+    data_state.set_active_table(table_name.clone()).map_err(|e| DataError::ParseError(e))?;
+    
+    let df = data_state.get_active_dataframe().ok_or(DataError::NoData)?;
+    let row_count = df.height();
+    let columns = df_to_columns(df);
+    let path = data_state.get_file_path().cloned().unwrap_or_default();
+    
+    // Recalculate basic info
+    let file_path = Path::new(&path);
+    let file_name = file_path
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("unknown")
+        .to_string();
+    
+    // We assume file size is same for now, or fetch it again
+    let file_size = if file_path.exists() {
+        fs::metadata(&path)?.len()
+    } else {
+        0
+    };
 
     Ok(DatasetInfo {
         file_name,
@@ -252,6 +353,7 @@ pub async fn load_excel(
         file_size,
         row_count,
         columns,
+        tables: data_state.get_tables(),
     })
 }
 
@@ -265,7 +367,7 @@ pub async fn get_data_page(
         .lock()
         .map_err(|e| DataError::ParseError(e.to_string()))?;
 
-    let df = data_state.get_dataframe().ok_or(DataError::NoData)?;
+    let df = data_state.get_active_dataframe().ok_or(DataError::NoData)?;
     let total_rows = df.height();
     let rows = df_to_rows(df, offset, limit);
 

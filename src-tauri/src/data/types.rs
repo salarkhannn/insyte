@@ -14,6 +14,7 @@ pub struct DatasetInfo {
     pub file_size: u64,
     pub row_count: usize,
     pub columns: Vec<ColumnInfo>,
+    pub tables: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

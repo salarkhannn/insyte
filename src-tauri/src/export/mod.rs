@@ -1,3 +1,4 @@
 mod commands;
 
-pub use commands::{export_chart_image, export_csv, export_excel};
+pub use commands::{export_chart, export_csv, export_excel};
+

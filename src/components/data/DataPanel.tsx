@@ -1,5 +1,8 @@
 import { Hash, Type, Calendar, ToggleLeft, FileSpreadsheet } from "lucide-react";
 import { useAppStore } from "../../stores/appStore";
+import { useDataStore } from "../../stores/dataStore";
+import { useVizBuilderStore } from "../../stores/vizBuilderStore";
+import { setActiveTable, getDataPage } from "../../services/fileService";
 import type { Column } from "../../types";
 
 const typeIcons: Record<Column["dtype"], { icon: React.ReactNode; label: string }> = {
@@ -56,7 +59,19 @@ function groupFieldsByType(columns: Column[]) {
 }
 
 export function DataPanel() {
-    const { fileName, rowCount, fileSize, columns, dataLoaded } = useAppStore();
+    const { 
+        fileName, 
+        rowCount, 
+        fileSize, 
+        columns, 
+        dataLoaded, 
+        tables, 
+        activeTable,
+        setProcessing,
+        setError
+    } = useAppStore();
+    const { setRowData } = useDataStore();
+    const resetVizBuilder = useVizBuilderStore((s) => s.reset);
 
     if (!dataLoaded) {
         return (
@@ -68,21 +83,80 @@ export function DataPanel() {
         );
     }
 
+
+
+    const handleTableSwitch = async (tableName: string) => {
+        if (tableName === activeTable) {
+            return;
+        }
+
+        try {
+            setProcessing(true, `Switching to ${tableName}...`);
+            
+            // Clear visualization but stay on current view
+            resetVizBuilder();
+
+            const info = await setActiveTable(tableName);
+            
+            // Update data + clear viz, but preserve activeView
+            useAppStore.setState((state) => {
+                const newWorksheets = state.worksheets.map(ws =>
+                    ws.id === state.activeWorksheetId
+                        ? { ...ws, visualization: null }
+                        : ws
+                );
+                return {
+                    worksheets: newWorksheets,
+                    currentVisualization: null,
+                    columns: info.columns,
+                    rowCount: info.rowCount,
+                    fileSize: info.fileSize,
+                    activeTable: tableName,
+                };
+            });
+
+            const page = await getDataPage(0, 10000, info.columns);
+            setRowData(page.rows, page.totalRows);
+        } catch (err) {
+            setError(err instanceof Error ? err.message : String(err));
+        } finally {
+            setProcessing(false);
+        }
+    };
+
     const groups = groupFieldsByType(columns);
 
     return (
         <div className="space-y-3">
-            {/* Dataset summary */}
-            <div className="flex items-start gap-2.5">
-                <FileSpreadsheet size={14} className="text-blue-600 shrink-0 mt-0.5" />
-                <div className="min-w-0 flex-1">
-                    <div className="font-medium text-xs text-neutral-900 truncate" title={fileName ?? ""}>
-                        {fileName}
-                    </div>
-                    <div className="text-[11px] text-neutral-500 mt-0.5">
-                        {formatNumber(rowCount)} rows • {formatBytes(fileSize)}
+            {/* Dataset summary & Table Selector */}
+            <div className="space-y-2">
+                <div className="flex items-start gap-2.5">
+                    <FileSpreadsheet size={14} className="text-blue-600 shrink-0 mt-0.5" />
+                    <div className="min-w-0 flex-1">
+                        <div className="font-medium text-xs text-neutral-900 truncate" title={fileName ?? ""}>
+                            {fileName}
+                        </div>
+                        <div className="text-[11px] text-neutral-500 mt-0.5">
+                            {formatNumber(rowCount)} rows • {formatBytes(fileSize)}
+                        </div>
                     </div>
                 </div>
+
+                {tables.length > 1 && (
+                    <select
+                        value={activeTable || ''}
+                        onChange={(e) => handleTableSwitch(e.target.value)}
+                        className="w-full px-2 py-1.5 bg-neutral-50 border border-neutral-200 rounded text-xs text-neutral-700"
+                    >
+                        {tables.map((table) => (
+                            <option key={table} value={table}>
+                                {table}
+                            </option>
+                        ))}
+                    </select>
+                )}
+                
+
             </div>
 
             {/* Grouped fields */}

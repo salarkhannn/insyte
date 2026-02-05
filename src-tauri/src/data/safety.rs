@@ -386,7 +386,7 @@ impl CardinalityInfo {
 
     fn determine_action(
         level: CardinalityLevel,
-        is_numeric: bool,
+        _is_numeric: bool,
         is_datetime: bool,
         unique_count: usize,
         total_rows: usize,

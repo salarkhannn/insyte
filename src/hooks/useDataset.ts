@@ -2,7 +2,7 @@ import { useCallback, useState } from "react";
 import { useAppStore } from "../stores/appStore";
 import { useDataStore } from "../stores/dataStore";
 import { useUiStore } from "../stores/uiStore";
-import { openFileDialog, loadFile, getDataPage, clearData } from "../services/fileService";
+import { openFileDialog, getDataPage, clearData, loadFile } from "../services/fileService";
 
 export function useDataset() {
     const [isLoading, setIsLoading] = useState(false);
@@ -45,6 +45,7 @@ export function useDataset() {
                 columns: info.columns,
                 rowCount: info.rowCount,
                 fileSize: info.fileSize,
+                tables: info.tables,
             });
 
             addRecentFile(info.filePath);

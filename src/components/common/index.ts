@@ -1,2 +1,2 @@
-export { ErrorBoundary } from "./ErrorBoundary";
-export { LoadingOverlay, LoadingSpinner } from "./LoadingOverlay";
+export * from "./LoadingOverlay";
+export * from "./ErrorBoundary";

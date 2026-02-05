@@ -27,6 +27,11 @@ interface AppState {
 
     showWelcome: boolean;
     settingsOpen: boolean;
+    
+    // Dataset state
+    tables: string[];
+    activeTable: string | null;
+    
     error: string | null;
 }
 
@@ -50,7 +55,9 @@ interface AppActions {
         columns: Column[];
         rowCount: number;
         fileSize: number;
+        tables: string[];
     }) => void;
+    setActiveTable: (table: string) => void;
     clearDataset: () => void;
     setVisualization: (spec: VisualizationSpec | null) => void;
     setProjectPath: (path: string | null) => void;
@@ -89,6 +96,8 @@ const initialState: AppState = {
     isDirty: false,
     showWelcome: true,
     settingsOpen: false,
+    tables: [],
+    activeTable: null,
     error: null,
 };
 
@@ -207,6 +216,8 @@ export const useAppStore = create<AppState & AppActions>((set, get) => ({
             columns: info.columns,
             rowCount: info.rowCount,
             fileSize: info.fileSize,
+            tables: info.tables || [],
+            activeTable: info.tables?.[0] || null,
             
             worksheets: [initialSheet],
             activeWorksheetId: initialSheetId,
@@ -221,6 +232,8 @@ export const useAppStore = create<AppState & AppActions>((set, get) => ({
         });
     },
 
+    setActiveTable: (table) => set({ activeTable: table }),
+
     clearDataset: () =>
         set({
             dataLoaded: false,
@@ -229,6 +242,8 @@ export const useAppStore = create<AppState & AppActions>((set, get) => ({
             columns: [],
             rowCount: 0,
             fileSize: 0,
+            tables: [],
+            activeTable: null,
             worksheets: [],
             activeWorksheetId: null,
             currentVisualization: null,

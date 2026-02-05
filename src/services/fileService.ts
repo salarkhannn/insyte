@@ -12,6 +12,7 @@ interface BackendDatasetInfo {
     dtype: string;
     nullable: boolean;
   }>;
+  tables?: string[];
 }
 
 interface BackendDataPage {
@@ -27,6 +28,7 @@ export interface DatasetInfo {
   fileSize: number;
   rowCount: number;
   columns: Column[];
+  tables: string[];
 }
 
 export interface DataPage {
@@ -62,6 +64,7 @@ function transformDatasetInfo(info: BackendDatasetInfo): DatasetInfo {
       dtype: mapDtype(col.dtype),
       nullable: col.nullable,
     })),
+    tables: info.tables || [],
   };
 }
 
@@ -130,6 +133,7 @@ export async function loadFile(path: string): Promise<DatasetInfo> {
       break;
     case "xlsx":
     case "xls":
+      // Load all sheets by default
       info = await invoke<BackendDatasetInfo>("load_excel", { path, sheet: null });
       break;
     case "json":
@@ -150,11 +154,35 @@ export async function loadExcelSheet(
   path: string,
   sheet: string
 ): Promise<DatasetInfo> {
+  // This might be used to force reload a specific sheet, but our new backend loads all.
+  // We can just use setActiveTable if it's already loaded, or re-load.
+  // For now, let's just re-use load_excel, it ignores 'sheet' param if we removed it, 
+  // OR we should keep the 'sheet' param in backend but make it optional? 
+  // I updated backend to accept `sheet: Option<String>` but then I rewrote the logic to IGNORE it and load all sheets if `sheets` found.
+  // Wait, I rewrote `load_excel` to `if let Some((first_sheet_name...))`. I didn't check the `sheet` param to set active table.
+  // That's fine, we can set active table after loading.
+  
   const info = await invoke<BackendDatasetInfo>("load_excel", {
     path,
-    sheet,
+    sheet: null,
   });
+  
+  // If a specific sheet was requested, we should set it as active.
+  if (sheet && info.tables?.includes(sheet)) {
+      return await setActiveTable(sheet);
+  }
+
   return transformDatasetInfo(info);
+}
+
+export async function setActiveTable(tableName: string): Promise<DatasetInfo> {
+    console.log('[fileService] setActiveTable called with tableName:', tableName);
+    console.log('[fileService] Invoking Tauri command: set_active_table');
+    const info = await invoke<BackendDatasetInfo>("set_active_table", { tableName });
+    console.log('[fileService] Backend returned:', info);
+    const transformed = transformDatasetInfo(info);
+    console.log('[fileService] Transformed result:', transformed);
+    return transformed;
 }
 
 export async function getDataPage(

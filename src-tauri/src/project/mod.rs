@@ -71,7 +71,7 @@ pub async fn save_project(
         .lock()
         .map_err(|e| ProjectError::WriteError(e.to_string()))?;
 
-    let df = data_state.get_dataframe().ok_or(ProjectError::NoData)?;
+    let df = data_state.get_active_dataframe().ok_or(ProjectError::NoData)?;
     let file_path = data_state.get_file_path().cloned();
 
     let columns: Vec<_> = df

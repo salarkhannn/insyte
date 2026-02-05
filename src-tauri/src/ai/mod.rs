@@ -5,4 +5,3 @@ pub mod types;
 
 pub use groq::GroqClient;
 pub use query::{process_ai_chat, process_ai_query};
-pub use types::AIChatResponse;

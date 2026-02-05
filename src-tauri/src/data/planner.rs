@@ -399,7 +399,7 @@ impl PlanExecutor {
         }
 
         let mut lazy_df = df.lazy();
-        let mut current_row_estimate = plan.original_row_count;
+        let _current_row_estimate = plan.original_row_count;
         let mut metadata = plan.reduction_metadata.clone();
 
         for transformation in &plan.transformations {
@@ -570,8 +570,8 @@ impl PlanExecutor {
     /// Apply numeric binning transformation.
     fn apply_numeric_binning(
         df: LazyFrame,
-        column: &str,
-        bin_count: usize,
+        _column: &str,
+        _bin_count: usize,
     ) -> Result<LazyFrame, DataError> {
         // Polars cut/qcut for binning
         // For simplicity, we'll create equal-width bins
@@ -602,7 +602,7 @@ impl PlanExecutor {
     /// This requires a partial materialization to determine top values.
     fn apply_top_n(
         df: LazyFrame,
-        column: &str,
+        _column: &str,
         n: usize,
         include_others: bool,
     ) -> Result<LazyFrame, DataError> {
@@ -652,7 +652,7 @@ impl PlanExecutor {
         seed: u64,
     ) -> Result<LazyFrame, DataError> {
         // Polars sample with seed for determinism
-        let fraction = 1.0; // We'll use limit instead for determinism
+        let _fraction = 1.0; // We'll use limit instead for determinism
 
         // For true deterministic sampling, we sort by a hash of row content
         // and take the first N rows. This ensures same rows are selected

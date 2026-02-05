@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Plus, Copy, Edit2, Trash2 } from "lucide-react";
+import { Plus, Copy, Edit2, Trash2, Table } from "lucide-react";
 import { useAppStore } from "../../stores/appStore";
 import { useVizBuilderStore } from "../../stores/vizBuilderStore";
 import { cn } from "../../utils";
@@ -119,6 +119,8 @@ export function WorksheetBar() {
     const {
         worksheets,
         activeWorksheetId,
+        activeView,
+        setActiveView,
         addWorksheet,
         setActiveWorksheet,
         renameWorksheet,
@@ -128,9 +130,6 @@ export function WorksheetBar() {
     
     const resetVizBuilder = useVizBuilderStore((s) => s.reset);
     const loadFromSpec = useVizBuilderStore((s) => s.loadFromSpec);
-
-    // If no worksheets (should stay synced, but for safety), show at least one
-    if (worksheets.length === 0) return null;
     
     const handleAddWorksheet = () => {
         addWorksheet();
@@ -140,21 +139,40 @@ export function WorksheetBar() {
     const handleActivateWorksheet = (id: string) => {
         const targetSheet = worksheets.find(ws => ws.id === id);
         setActiveWorksheet(id);
+        setActiveView("chart");
         if (targetSheet?.visualization) {
             loadFromSpec(targetSheet.visualization);
         } else {
             resetVizBuilder();
         }
     };
+    
+    const handleActivateDataSource = () => {
+        setActiveView("table");
+    };
 
     return (
         <div className="flex items-center h-8 bg-neutral-100 border-t border-neutral-200 select-none overflow-x-auto overflow-y-hidden">
             <div className="flex h-full">
+                {/* Data Source Tab */}
+                <div
+                    onClick={handleActivateDataSource}
+                    className={cn(
+                        "group flex items-center h-8 px-3 text-xs cursor-pointer select-none min-w-[100px] border-r border-neutral-200 gap-2",
+                        activeView === "table"
+                            ? "bg-white text-primary font-medium border-t-2 border-t-transparent border-b-2 border-b-primary"
+                            : "bg-neutral-100 text-neutral-600 hover:bg-neutral-50 border-b border-neutral-200"
+                    )}
+                >
+                    <Table size={12} />
+                    <span className="truncate">Data Source</span>
+                </div>
+
                 {worksheets.map((ws) => (
                     <WorksheetTab
                         key={ws.id}
                         worksheet={ws}
-                        isActive={ws.id === activeWorksheetId}
+                        isActive={activeView === "chart" && ws.id === activeWorksheetId}
                         onActivate={() => handleActivateWorksheet(ws.id)}
                         onRename={(name) => renameWorksheet(ws.id, name)}
                         onDuplicate={() => duplicateWorksheet(ws.id)}
