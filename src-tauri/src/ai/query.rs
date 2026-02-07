@@ -64,6 +64,14 @@ fn extract_json(response: &str) -> Option<&str> {
     None
 }
 
+fn sanitize_json_response(json_str: &str) -> String {
+    json_str
+        .replace(r#""aggregation": "none""#, r#""aggregation": "count""#)
+        .replace(r#""aggregation":"none""#, r#""aggregation":"count""#)
+        .replace(r#""aggregation": "None""#, r#""aggregation": "count""#)
+        .replace(r#""aggregation":"None""#, r#""aggregation": "count""#)
+}
+
 fn get_api_key() -> Result<String, AIError> {
     if let Ok(key) = std::env::var("GROQ_API_KEY") {
         if !key.is_empty() {
@@ -121,8 +129,10 @@ pub async fn process_ai_query(
     let json_str = extract_json(&response)
         .ok_or_else(|| AIError::ParseError("No valid JSON found in response".to_string()))?;
 
+    let sanitized = sanitize_json_response(json_str);
+
     let spec: VisualizationSpec =
-        serde_json::from_str(json_str).map_err(|e| AIError::ParseError(e.to_string()))?;
+        serde_json::from_str(&sanitized).map_err(|e| AIError::ParseError(e.to_string()))?;
 
     validate_spec(&spec, &columns)?;
 
@@ -202,8 +212,10 @@ pub async fn process_ai_chat(
     let json_str = extract_json(&response)
         .ok_or_else(|| AIError::ParseError("No valid JSON found in response".to_string()))?;
 
+    let sanitized = sanitize_json_response(json_str);
+
     let raw: RawChatResponse =
-        serde_json::from_str(json_str).map_err(|e| AIError::ParseError(e.to_string()))?;
+        serde_json::from_str(&sanitized).map_err(|e| AIError::ParseError(e.to_string()))?;
 
     match raw.intent.as_str() {
         "visualization" => {

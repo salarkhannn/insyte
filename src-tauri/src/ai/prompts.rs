@@ -46,10 +46,11 @@ RULES:
 1. Output ONLY valid JSON, no explanation or markdown
 2. Use exact column names from schema
 3. Choose the chart type that best matches the user's request
-4. Include aggregation when needed: sum, avg, count, min, max, median
+4. Always use a valid aggregation: sum, avg, count, min, max, or median
 5. If the query is ambiguous, make reasonable assumptions
+6. NEVER use "none" or "None" for aggregation - always choose count as default
 
-OUTPUT FORMAT:
+OUTPUT FORMAT (use exact lowercase values):
 {{
   "chartType": "bar|line|area|pie|scatter",
   "xField": "column_name",
@@ -60,7 +61,9 @@ OUTPUT FORMAT:
   "sortOrder": "asc|desc|none",
   "title": "Chart Title",
   "filters": []
-}}"#,
+}}
+
+IMPORTANT: The "aggregation" field must be one of: sum, avg, count, min, max, median (lowercase only)"#,
         row_count, schema_description, user_query
     )
 }
@@ -126,6 +129,8 @@ For VISUALIZATION requests (show, chart, plot, compare, trend, etc.):
   "explanation": "Brief explanation of what this chart displays and why this visualization is appropriate."
 }}
 
+IMPORTANT: The "aggregation" field MUST be one of: sum, avg, count, min, max, median (lowercase only). NEVER use "none" or "None".
+
 For DATA QUESTIONS (what, how many, total, average, list, etc.):
 {{
   "intent": "question",
@@ -140,7 +145,9 @@ RULES:
 - Use exact column names from the schema
 - For questions about totals, counts, or aggregations, provide your best estimate based on sample data
 - Keep explanations concise (1-2 sentences)
-- Insights are optional; include only if there are relevant supporting metrics"#,
+- Insights are optional; include only if there are relevant supporting metrics
+- For aggregation, choose: sum for totals, avg for averages, count for frequencies, min/max for ranges, median for central tendency
+- NEVER use "none" or "None" for aggregation field"#,
         row_count,
         schema_description,
         sample_rows.len(),
