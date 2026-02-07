@@ -691,6 +691,7 @@ fn format_number(n: usize) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::ai::types::ChartType;
 
     fn create_test_df() -> DataFrame {
         df! {
