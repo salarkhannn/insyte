@@ -116,7 +116,8 @@ export const useAppStore = create<AppState & AppActions>((set, get) => ({
             worksheets: [...state.worksheets, newSheet],
             activeWorksheetId: id,
             currentVisualization: null,
-            activeView: "table" // Reset view when new sheet created
+            activeView: "chart",
+            isDirty: true
         }));
     },
 
