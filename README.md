@@ -97,16 +97,85 @@ insyte/
 | Data | Polars |
 | AI | Groq API (Llama 3.x) |
 
-## Development Notes
+## Building
 
-**Building on Windows**: Works out of the box with the standard Rust + Node toolchain.
+### Prerequisites
 
-**Building on Linux**: You'll need WebKit and GTK development packages:
-```bash
-sudo apt install libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev
+- Node.js 20+
+- pnpm 9+
+- Rust 1.75+
+
+### Platform-Specific Requirements
+
+**Windows:**
+```powershell
+# No additional requirements - works out of the box
 ```
 
-**Building on macOS**: Xcode command line tools required.
+**macOS:**
+```bash
+xcode-select --install
+```
+
+**Linux:**
+```bash
+sudo apt-get update
+sudo apt-get install -y libwebkit2gtk-4.1-dev \
+    libappindicator3-dev \
+    librsvg2-dev \
+    patchelf \
+    libssl-dev
+```
+
+### Development Build
+```bash
+pnpm install
+pnpm tauri dev
+```
+
+### Production Build
+
+**Windows:**
+```bash
+pnpm tauri build --target x86_64-pc-windows-msvc
+```
+Outputs: `src-tauri/target/release/bundle/msi/` and `nsis/`
+
+**macOS (Intel):**
+```bash
+pnpm tauri build --target x86_64-apple-darwin
+```
+Outputs: `src-tauri/target/x86_64-apple-darwin/release/bundle/dmg/`
+
+**macOS (Apple Silicon):**
+```bash
+pnpm tauri build --target aarch64-apple-darwin
+```
+Outputs: `src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/`
+
+**Linux:**
+```bash
+pnpm tauri build --target x86_64-unknown-linux-gnu
+```
+Outputs: `src-tauri/target/release/bundle/deb/` and `appimage/`
+
+### Troubleshooting
+
+**Build fails on Linux:**
+```bash
+sudo apt-get install -y build-essential curl wget git \
+    libwebkit2gtk-4.1-dev libgtk-3-dev libayatana-appindicator3-dev
+```
+
+**Build fails on macOS:**
+```bash
+xcode-select --install
+```
+
+**Build fails with Rust errors:**
+```bash
+rustup update
+```
 
 ## License
 
