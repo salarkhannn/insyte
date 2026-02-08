@@ -107,8 +107,8 @@ export function WelcomeScreen({
             <div className="flex-1 flex min-h-0">
             <div className="w-72 bg-neutral-800 p-6 flex flex-col shrink-0">
                 <div className="mb-8">
-                    <div className="w-10 h-10 rounded bg-white/10 flex items-center justify-center mb-3">
-                        <span className="text-white font-semibold text-lg">I</span>
+                    <div className="w-10 h-10 rounded mb-3">
+                        <img src="/icon.png" alt="Insyte" className="w-full h-full" />
                     </div>
                     <h1 className="text-xl font-semibold text-white">insyte</h1>
                     <p className="text-xs text-neutral-400 mt-1">Data Analytics</p>
