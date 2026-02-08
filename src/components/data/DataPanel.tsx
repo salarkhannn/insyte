@@ -27,8 +27,23 @@ function formatNumber(num: number): string {
 
 function FieldItem({ column }: { column: Column }) {
     const { icon } = typeIcons[column.dtype];
+
+    const handleDragStart = (e: React.DragEvent) => {
+        console.log('[DND] dragStart fired for field:', column.name, 'dtype:', column.dtype);
+        console.log('[DND] dataTransfer types before set:', Array.from(e.dataTransfer.types));
+        e.dataTransfer.setData("application/json", JSON.stringify({ name: column.name, dtype: column.dtype }));
+        e.dataTransfer.setData("text/plain", column.name);
+        e.dataTransfer.effectAllowed = "copy";
+        console.log('[DND] dataTransfer types after set:', Array.from(e.dataTransfer.types));
+        console.log('[DND] effectAllowed:', e.dataTransfer.effectAllowed);
+    };
+
     return (
-        <div className="flex items-center gap-2 py-1 text-neutral-700 hover:bg-neutral-50 px-1 rounded cursor-default">
+        <div
+            draggable
+            onDragStart={handleDragStart}
+            className="flex items-center gap-2 py-1 text-neutral-700 hover:bg-neutral-50 px-1 rounded cursor-grab active:cursor-grabbing select-none"
+        >
             <span className="shrink-0">{icon}</span>
             <span className="truncate text-xs">{column.name}</span>
         </div>

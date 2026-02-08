@@ -12,6 +12,7 @@ interface VizBuilderState {
     xField: string | null;
     yField: string | null;
     aggregation: AggregationType;
+    xAggregation: AggregationType;
     sortBy: SortField;
     sortOrder: SortOrder;
     title: string;
@@ -24,6 +25,7 @@ interface VizBuilderActions {
     setXField: (field: string | null) => void;
     setYField: (field: string | null) => void;
     setAggregation: (agg: AggregationType) => void;
+    setXAggregation: (agg: AggregationType) => void;
     setSortBy: (sort: SortField) => void;
     setSortOrder: (order: SortOrder) => void;
     setTitle: (title: string) => void;
@@ -38,6 +40,7 @@ const initialState: VizBuilderState = {
     xField: null,
     yField: null,
     aggregation: "sum",
+    xAggregation: "sum",
     sortBy: "none",
     sortOrder: "asc",
     title: "",
@@ -53,6 +56,7 @@ export const useVizBuilderStore = create<VizBuilderState & VizBuilderActions>((s
     setXField: (xField) => set({ xField }),
     setYField: (yField) => set({ yField }),
     setAggregation: (aggregation) => set({ aggregation }),
+    setXAggregation: (xAggregation) => set({ xAggregation }),
     setSortBy: (sortBy) => set({ sortBy }),
     setSortOrder: (sortOrder) => set({ sortOrder }),
     setTitle: (title) => set({ title }),
