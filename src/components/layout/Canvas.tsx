@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useEffect, useCallback } from "react";
 import { useAppStore } from "../../stores/appStore";
 import { useVizBuilderStore } from "../../stores/vizBuilderStore";
 import { TableView } from "../data/TableView";
@@ -40,12 +40,24 @@ export function Canvas() {
         yField,
         aggregation,
         xAggregation,
+        xDateBinning,
+        yDateBinning,
         setXField,
         setYField,
         setAggregation,
         setXAggregation,
+        setXDateBinning,
+        setYDateBinning,
         buildSpec,
     } = useVizBuilderStore();
+
+    const handleXFieldChange = useCallback((field: string | null) => {
+        setXField(field, columns);
+    }, [columns, setXField]);
+
+    const handleYFieldChange = useCallback((field: string | null) => {
+        setYField(field, columns);
+    }, [columns, setYField]);
 
     useEffect(() => {
         if (dataLoaded && xField && yField) {
@@ -55,7 +67,7 @@ export function Canvas() {
                 setActiveView("chart");
             }
         }
-    }, [dataLoaded, chartType, xField, yField, aggregation, buildSpec, columns, setVisualization, setActiveView]);
+    }, [dataLoaded, chartType, xField, yField, aggregation, xDateBinning, yDateBinning, buildSpec, columns, setVisualization, setActiveView]);
 
     return (
         <main className="flex-1 flex flex-col overflow-hidden bg-neutral-100/50 relative">
@@ -66,10 +78,14 @@ export function Canvas() {
                     yField={yField}
                     xAggregation={xAggregation}
                     yAggregation={aggregation}
-                    onXFieldChange={setXField}
-                    onYFieldChange={setYField}
+                    xDateBinning={xDateBinning}
+                    yDateBinning={yDateBinning}
+                    onXFieldChange={handleXFieldChange}
+                    onYFieldChange={handleYFieldChange}
                     onXAggregationChange={setXAggregation}
                     onYAggregationChange={setAggregation}
+                    onXDateBinningChange={setXDateBinning}
+                    onYDateBinningChange={setYDateBinning}
                 />
             )}
             {!dataLoaded ? (

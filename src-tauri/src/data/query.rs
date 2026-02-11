@@ -19,7 +19,7 @@
 use crate::ai::types::{
     AggregationType, FilterOperator, FilterSpec, SortField, SortOrder, VisualizationSpec,
 };
-use crate::data::safety::{ZoomContext, MAX_VISUAL_POINTS};
+use crate::data::safety::{ZoomContext, MAX_VISUAL_POINTS, DateBinGranularity};
 use crate::data::sampling::scatter_sample;
 use crate::data::state::AppDataState;
 use crate::error::DataError;
@@ -98,6 +98,9 @@ pub struct ChartMetadata {
     /// Human-readable warning message for UI display.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub warning_message: Option<String>,
+
+    #[serde(default)]
+    pub swapped: bool,
 }
 
 fn default_reduction_reason() -> String {
@@ -228,6 +231,23 @@ fn apply_aggregation(
     };
 
     Ok(df.group_by([col(x_field)]).agg([agg_expr]))
+}
+
+fn apply_date_binning(
+    df: LazyFrame,
+    column: &str,
+    granularity: DateBinGranularity,
+) -> Result<LazyFrame, DataError> {
+    let bin_expr = match granularity {
+        DateBinGranularity::Year => col(column).dt().year().alias(column),
+        DateBinGranularity::Quarter => col(column).dt().quarter().alias(column),
+        DateBinGranularity::Month => col(column).dt().strftime("%Y-%m").alias(column),
+        DateBinGranularity::Week => col(column).dt().week().alias(column),
+        DateBinGranularity::Day => col(column).dt().date().alias(column),
+        DateBinGranularity::Hour => col(column).dt().hour().alias(column),
+    };
+
+    Ok(df.with_column(bin_expr))
 }
 
 // ============================================================================
@@ -431,71 +451,123 @@ pub async fn execute_visualization_query(
     spec: VisualizationSpec,
     state: State<'_, AppDataState>,
 ) -> Result<ChartData, DataError> {
-    // === STEP 1: SAFELY ACQUIRE DATA ===
+    println!("DEBUG: Executing visualization query: {:?}", spec);
+    let result = execute_visualization_query_internal(spec, state.clone()).await;
+    if let Err(ref e) = result {
+        println!("DEBUG: Visualization query failed: {:?}", e);
+    } else {
+        println!("DEBUG: Visualization query success");
+    }
+    result
+}
+
+fn is_numeric_dtype(dtype: &DataType) -> bool {
+    matches!(
+        dtype,
+        DataType::Int8
+            | DataType::Int16
+            | DataType::Int32
+            | DataType::Int64
+            | DataType::UInt8
+            | DataType::UInt16
+            | DataType::UInt32
+            | DataType::UInt64
+            | DataType::Float32
+            | DataType::Float64
+    )
+}
+
+async fn execute_visualization_query_internal(
+    spec: VisualizationSpec,
+    state: State<'_, AppDataState>,
+) -> Result<ChartData, DataError> {
     let data_state = state
         .lock()
         .map_err(|e| DataError::ParseError(format!("Failed to acquire data lock: {}", e)))?;
 
     let df = data_state.get_active_dataframe().ok_or(DataError::NoData)?.clone();
-
     let total_records = df.height();
 
-    // === STEP 2: VALIDATE COLUMNS EXIST ===
-    // Fail fast with helpful error if columns don't exist
-    if df.column(&spec.x_field).is_err() {
-        return Err(DataError::ColumnNotFound {
-            column: spec.x_field.clone(),
-            available: df
-                .get_column_names()
-                .iter()
-                .map(|s| s.to_string())
-                .collect::<Vec<_>>()
-                .join(", "),
-        });
+    for field_name in [&spec.x_field, &spec.y_field] {
+        if df.column(field_name).is_err() {
+            return Err(DataError::ColumnNotFound {
+                column: field_name.clone(),
+                available: df
+                    .get_column_names()
+                    .iter()
+                    .map(|s| s.to_string())
+                    .collect::<Vec<_>>()
+                    .join(", "),
+            });
+        }
     }
 
-    if df.column(&spec.y_field).is_err() {
-        return Err(DataError::ColumnNotFound {
-            column: spec.y_field.clone(),
-            available: df
-                .get_column_names()
-                .iter()
-                .map(|s| s.to_string())
-                .collect::<Vec<_>>()
-                .join(", "),
-        });
-    }
+    let x_dtype = df.column(&spec.x_field).unwrap().dtype().clone();
+    let y_dtype = df.column(&spec.y_field).unwrap().dtype().clone();
 
-    // === STEP 3: ANALYZE CARDINALITY ===
-    let x_series = df
-        .column(&spec.x_field)
+    let x_is_numeric = is_numeric_dtype(&x_dtype);
+    let y_is_numeric = is_numeric_dtype(&y_dtype);
+
+    let (category_field, value_field, swapped) = if x_is_numeric && !y_is_numeric {
+        (spec.y_field.clone(), spec.x_field.clone(), true)
+    } else if !x_is_numeric && y_is_numeric {
+        (spec.x_field.clone(), spec.y_field.clone(), false)
+    } else if !x_is_numeric && !y_is_numeric {
+        (spec.x_field.clone(), spec.y_field.clone(), false)
+    } else {
+        (spec.x_field.clone(), spec.y_field.clone(), false)
+    };
+
+    let value_dtype = df.column(&value_field).unwrap().dtype().clone();
+    let value_is_numeric = is_numeric_dtype(&value_dtype);
+    let effective_aggregation = if value_is_numeric {
+        spec.aggregation.clone()
+    } else {
+        AggregationType::Count
+    };
+
+    let category_dtype = if swapped { &y_dtype } else { &x_dtype };
+    let category_is_date = matches!(category_dtype, DataType::Date | DataType::Datetime(_, _));
+
+    println!(
+        "DEBUG: category_field={}, value_field={}, swapped={}, x_dtype={:?}, y_dtype={:?}",
+        category_field, value_field, swapped, x_dtype, y_dtype
+    );
+
+    let category_series = df
+        .column(&category_field)
         .map_err(|e| DataError::ParseError(e.to_string()))?;
+    let _cardinality = estimate_cardinality(category_series, total_records);
 
-    let _x_cardinality = estimate_cardinality(x_series, total_records);
-
-    // === STEP 4: DETERMINE CHART-SPECIFIC LIMITS ===
     let chart_type_str = format!("{:?}", spec.chart_type).to_lowercase();
     let max_points = get_max_points_for_chart(&chart_type_str);
 
-    // Track reduction metadata for user feedback
     let mut reduced = false;
     let mut reduction_reason = "none".to_string();
     let sample_ratio: Option<f64> = None;
     let mut top_n_value: Option<usize> = None;
     let mut warning_message: Option<String> = None;
 
-    // === STEP 5: BUILD LAZY QUERY PIPELINE ===
     let mut lazy_df = df.lazy();
 
-    // 5a: Apply filters FIRST (pushdown optimization)
     for filter in &spec.filters {
         lazy_df = apply_filter(lazy_df, filter)?;
     }
 
-    // 5b: Apply aggregation (REQUIRED - never show raw rows)
-    lazy_df = apply_aggregation(lazy_df, &spec.x_field, &spec.y_field, &spec.aggregation)?;
+    if category_is_date {
+        let binning = if swapped {
+            spec.y_date_binning
+        } else {
+            spec.x_date_binning
+        };
+        
+        if let Some(granularity) = binning {
+            lazy_df = apply_date_binning(lazy_df, &category_field, granularity)?;
+        }
+    }
 
-    // === STEP 6: CHECK POST-AGGREGATION CARDINALITY ===
+    lazy_df = apply_aggregation(lazy_df, &category_field, &value_field, &effective_aggregation)?;
+
     let aggregated_df = lazy_df
         .clone()
         .collect()
@@ -503,15 +575,13 @@ pub async fn execute_visualization_query(
 
     let aggregated_count = aggregated_df.height();
 
-    // === STEP 7: APPLY TOP-N IF EXCEEDS LIMIT ===
-    // This is critical for preventing rendering issues with high-cardinality data
     let final_lazy = if aggregated_count > max_points {
         reduced = true;
         reduction_reason = "top-n".to_string();
         top_n_value = Some(max_points);
 
         let (top_n_lazy, has_others) =
-            apply_top_n_with_others(aggregated_df.lazy(), max_points, &spec.x_field, true)?;
+            apply_top_n_with_others(aggregated_df.lazy(), max_points, &category_field, !category_is_date)?;
 
         warning_message = Some(format!(
             "Showing top {} of {} categories{}",
@@ -522,7 +592,6 @@ pub async fn execute_visualization_query(
 
         top_n_lazy
     } else if aggregated_count < total_records {
-        // Aggregation reduced data
         reduced = true;
         reduction_reason = "auto-aggregation".to_string();
         warning_message = Some(format!(
@@ -535,34 +604,31 @@ pub async fn execute_visualization_query(
         aggregated_df.lazy()
     };
 
-    // === STEP 8: APPLY SORTING ===
-    let sorted_lazy = apply_sorting(final_lazy, &spec.x_field, &spec.sort_by, &spec.sort_order);
-
-    // === STEP 9: APPLY FINAL SAFETY LIMIT ===
-    // Absolute cap: never exceed MAX_VISUAL_POINTS regardless of other settings
+    let sorted_lazy = apply_sorting(final_lazy, &category_field, &spec.sort_by, &spec.sort_order);
     let limited_lazy = sorted_lazy.limit(MAX_VISUAL_POINTS as u32);
 
-    // === STEP 10: COLLECT FINAL RESULT ===
     let result_df = limited_lazy
         .collect()
         .map_err(|e| DataError::ParseError(e.to_string()))?;
 
     let returned_points = result_df.height();
+    let (labels, data) = extract_chart_data(result_df, &category_field)?;
 
-    // === STEP 11: EXTRACT CHART DATA ===
-    let (labels, data) = extract_chart_data(result_df, &spec.x_field)?;
-
-    // === STEP 12: BUILD AGGREGATION LABEL ===
-    let agg_label = match spec.aggregation {
-        AggregationType::Sum => format!("Sum of {}", spec.y_field),
-        AggregationType::Avg => format!("Average of {}", spec.y_field),
-        AggregationType::Count => format!("Count of {}", spec.y_field),
-        AggregationType::Min => format!("Min of {}", spec.y_field),
-        AggregationType::Max => format!("Max of {}", spec.y_field),
-        AggregationType::Median => format!("Median of {}", spec.y_field),
+    let agg_label = match effective_aggregation {
+        AggregationType::Sum => format!("Sum of {}", value_field),
+        AggregationType::Avg => format!("Average of {}", value_field),
+        AggregationType::Count => format!("Count of {}", value_field),
+        AggregationType::Min => format!("Min of {}", value_field),
+        AggregationType::Max => format!("Max of {}", value_field),
+        AggregationType::Median => format!("Median of {}", value_field),
     };
 
-    // === STEP 13: RETURN WITH FULL METADATA ===
+    let (x_label, y_label) = if swapped {
+        (agg_label.clone(), category_field.clone())
+    } else {
+        (category_field.clone(), agg_label.clone())
+    };
+
     Ok(ChartData {
         labels,
         datasets: vec![ChartDataset {
@@ -572,10 +638,9 @@ pub async fn execute_visualization_query(
         }],
         metadata: ChartMetadata {
             title: spec.title,
-            x_label: spec.x_field,
-            y_label: agg_label,
+            x_label,
+            y_label,
             total_records,
-            // === REDUCTION FEEDBACK FOR UI ===
             reduced,
             reduction_reason,
             original_row_estimate: total_records,
@@ -583,6 +648,7 @@ pub async fn execute_visualization_query(
             sample_ratio,
             top_n_value,
             warning_message,
+            swapped,
         },
     })
 }
@@ -598,6 +664,20 @@ pub async fn execute_visualization_query(
 /// # Safety: Uses deterministic sampling to ensure stable results
 #[tauri::command]
 pub async fn execute_scatter_query(
+    spec: VisualizationSpec,
+    state: State<'_, AppDataState>,
+) -> Result<ChartData, DataError> {
+    println!("DEBUG: Executing scatter query: {:?}", spec);
+    let result = execute_scatter_query_internal(spec, state.clone()).await;
+    if let Err(ref e) = result {
+        println!("DEBUG: Scatter query failed: {:?}", e);
+    } else {
+        println!("DEBUG: Scatter query success");
+    }
+    result
+}
+
+async fn execute_scatter_query_internal(
     spec: VisualizationSpec,
     state: State<'_, AppDataState>,
 ) -> Result<ChartData, DataError> {
@@ -714,6 +794,7 @@ pub async fn execute_scatter_query(
             sample_ratio,
             top_n_value: None,
             warning_message,
+            swapped: false,
         },
     })
 }

@@ -70,7 +70,21 @@ export function ChartContainer({ spec }: ChartContainerProps) {
                 : await executeVisualizationQuery(spec);
             setChartData(data);
         } catch (err) {
-            setError(err instanceof Error ? err.message : String(err));
+            let errorMessage = "Unknown error";
+            if (err instanceof Error) {
+                errorMessage = err.message;
+            } else if (typeof err === "string") {
+                errorMessage = err;
+            } else if (typeof err === "object" && err !== null) {
+                try {
+                    errorMessage = JSON.stringify(err, null, 2);
+                } catch {
+                    errorMessage = String(err);
+                }
+            } else {
+                errorMessage = String(err);
+            }
+            setError(errorMessage);
         } finally {
             setIsLoading(false);
         }

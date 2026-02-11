@@ -30,7 +30,6 @@ const baseChartDefaults = {
 export const barChartDefaults: BarChartConfig = {
     ...baseChartDefaults,
     type: "bar",
-    orientation: "vertical",
     stacked: false,
     showValueLabels: false,
     barRadius: 2,

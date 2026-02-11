@@ -6,6 +6,8 @@ interface BackendVisualizationSpec {
     xField: string;
     yField: string;
     aggregation: "sum" | "avg" | "count" | "min" | "max" | "median";
+    xDateBinning?: "year" | "quarter" | "month" | "day" | null;
+    yDateBinning?: "year" | "quarter" | "month" | "day" | null;
     groupBy: string | null;
     sortBy: "x" | "y" | "none";
     sortOrder: "asc" | "desc" | "none";
@@ -38,6 +40,7 @@ interface BackendChartData {
         sample_ratio?: number | null;
         top_n_value?: number | null;
         warning_message?: string | null;
+        swapped?: boolean;
     };
 }
 
@@ -67,7 +70,7 @@ export interface AppSettings {
 }
 
 function transformVisualizationSpec(spec: BackendVisualizationSpec): VisualizationSpec {
-    return {
+    const result: VisualizationSpec = {
         chartType: spec.chartType,
         xField: spec.xField,
         yField: spec.yField,
@@ -83,6 +86,9 @@ function transformVisualizationSpec(spec: BackendVisualizationSpec): Visualizati
         })),
         chartConfig: spec.chartConfig as VisualizationSpec["chartConfig"],
     };
+    if (spec.xDateBinning) result.xDateBinning = spec.xDateBinning;
+    if (spec.yDateBinning) result.yDateBinning = spec.yDateBinning;
+    return result;
 }
 
 function transformVisualizationSpecToBackend(spec: VisualizationSpec): BackendVisualizationSpec {
@@ -91,6 +97,8 @@ function transformVisualizationSpecToBackend(spec: VisualizationSpec): BackendVi
         xField: spec.xField,
         yField: spec.yField,
         aggregation: spec.aggregation,
+        xDateBinning: spec.xDateBinning ?? null,
+        yDateBinning: spec.yDateBinning ?? null,
         groupBy: spec.groupBy,
         sortBy: spec.sortBy,
         sortOrder: spec.sortOrder,
@@ -129,6 +137,7 @@ function transformChartData(data: BackendChartData): ChartData {
             sampleRatio: data.metadata.sample_ratio ?? undefined,
             topNValue: data.metadata.top_n_value ?? undefined,
             warningMessage: data.metadata.warning_message ?? undefined,
+            swapped: data.metadata.swapped ?? false,
         },
     };
 }

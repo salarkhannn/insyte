@@ -35,7 +35,6 @@ export interface BaseChartConfig {
 
 export interface BarChartConfig extends BaseChartConfig {
     type: "bar";
-    orientation: Orientation;
     stacked: boolean;
     showValueLabels: boolean;
     barRadius: number;

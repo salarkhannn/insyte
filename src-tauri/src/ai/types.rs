@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use crate::data::safety::DateBinGranularity;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -7,6 +8,10 @@ pub struct VisualizationSpec {
     pub x_field: String,
     pub y_field: String,
     pub aggregation: AggregationType,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub x_date_binning: Option<DateBinGranularity>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub y_date_binning: Option<DateBinGranularity>,
     pub group_by: Option<String>,
     pub sort_by: SortField,
     pub sort_order: SortOrder,

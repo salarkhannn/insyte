@@ -25,17 +25,6 @@ interface PropertyMetadata {
 
 export const barChartProperties: PropertyMetadata[] = [
     {
-        key: "orientation",
-        label: "Orientation",
-        type: "enum",
-        default: "vertical",
-        group: "Layout",
-        options: [
-            { value: "vertical", label: "Vertical" },
-            { value: "horizontal", label: "Horizontal" },
-        ],
-    },
-    {
         key: "stacked",
         label: "Stacked",
         type: "boolean",

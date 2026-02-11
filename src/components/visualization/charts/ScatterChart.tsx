@@ -11,6 +11,9 @@ interface ScatterChartProps {
 }
 
 export function ScatterChart({ data, config }: ScatterChartProps) {
+    console.log("[DEBUG] ScatterChart - Rendering with data:", data);
+    console.log("[DEBUG] ScatterChart - Config:", config);
+    
     const containerRef = useRef<HTMLDivElement | null>(null);
     const chartRef = useRef<echarts.ECharts | null>(null);
     const resizeObserverRef = useRef<ResizeObserver | null>(null);

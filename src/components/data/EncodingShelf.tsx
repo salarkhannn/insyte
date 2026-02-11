@@ -1,7 +1,7 @@
 import { useState, useEffect, type DragEvent } from "react";
 import { ChevronDown, X } from "lucide-react";
 import { cn } from "../../utils";
-import type { Column, VisualizationSpec } from "../../types";
+import type { Column, VisualizationSpec, DateBinning } from "../../types";
 
 const AGGREGATIONS: Array<{ value: VisualizationSpec["aggregation"]; label: string }> = [
     { value: "sum", label: "Sum" },
@@ -9,6 +9,13 @@ const AGGREGATIONS: Array<{ value: VisualizationSpec["aggregation"]; label: stri
     { value: "count", label: "Count" },
     { value: "min", label: "Min" },
     { value: "max", label: "Max" },
+];
+
+const DATE_BINNINGS: Array<{ value: DateBinning; label: string }> = [
+    { value: "year", label: "Year" },
+    { value: "quarter", label: "Quarter" },
+    { value: "month", label: "Month" },
+    { value: "day", label: "Day" },
 ];
 
 function parseDropData(e: DragEvent): string | null {
@@ -33,19 +40,28 @@ function sortedFieldNames(columns: Column[], preferType: "categorical" | "numeri
 interface ShelfRowProps {
     label: string;
     field: string | null;
-    options: string[];
+    columns: Column[];
     aggregation: VisualizationSpec["aggregation"];
+    dateBinning: DateBinning;
     onFieldChange: (field: string | null) => void;
     onAggregationChange: (agg: VisualizationSpec["aggregation"]) => void;
+    onDateBinningChange: (binning: DateBinning) => void;
 }
 
-function ShelfRow({ label, field, options, aggregation, onFieldChange, onAggregationChange }: ShelfRowProps) {
+function ShelfRow({ label, field, columns, aggregation, dateBinning, onFieldChange, onAggregationChange, onDateBinningChange }: ShelfRowProps) {
     const [isDragTarget, setIsDragTarget] = useState(false);
     const [isDragging, setIsDragging] = useState(false);
 
+    const fieldColumn = field ? columns.find(c => c.name === field) : null;
+    const fieldType = fieldColumn?.dtype;
+    const isNumeric = fieldType === "integer" || fieldType === "float";
+    const isDate = fieldType === "date";
+
+    const sortedOptions = sortedFieldNames(columns, label === "Rows" ? "categorical" : "numeric");
+
     useEffect(() => {
-        const onDragStart = () => { console.log('[DND][Shelf:' + label + '] window dragstart detected, isDragging=true'); setIsDragging(true); };
-        const onDragEnd = () => { console.log('[DND][Shelf:' + label + '] window dragend/drop detected, isDragging=false'); setIsDragging(false); setIsDragTarget(false); };
+        const onDragStart = () => setIsDragging(true);
+        const onDragEnd = () => { setIsDragging(false); setIsDragTarget(false); };
         window.addEventListener("dragstart", onDragStart);
         window.addEventListener("dragend", onDragEnd);
         window.addEventListener("drop", onDragEnd);
@@ -61,14 +77,12 @@ function ShelfRow({ label, field, options, aggregation, onFieldChange, onAggrega
         e.stopPropagation();
         e.dataTransfer.dropEffect = "copy";
         if (!isDragTarget) {
-            console.log('[DND][Shelf:' + label + '] dragOver on target, types:', Array.from(e.dataTransfer.types), 'target:', (e.target as HTMLElement).tagName);
             setIsDragTarget(true);
         }
     };
 
     const handleDragLeave = (e: DragEvent) => {
         if (!e.currentTarget.contains(e.relatedTarget as Node)) {
-            console.log('[DND][Shelf:' + label + '] dragLeave');
             setIsDragTarget(false);
         }
     };
@@ -79,7 +93,6 @@ function ShelfRow({ label, field, options, aggregation, onFieldChange, onAggrega
         setIsDragTarget(false);
         setIsDragging(false);
         const name = parseDropData(e);
-        console.log('[DND][Shelf:' + label + '] DROP received, parsed name:', name, 'types:', Array.from(e.dataTransfer.types));
         if (name) onFieldChange(name);
     };
 
@@ -108,7 +121,7 @@ function ShelfRow({ label, field, options, aggregation, onFieldChange, onAggrega
                     )}
                 >
                     <option value="">Drop or select a field</option>
-                    {options.map(name => (
+                    {sortedOptions.map(name => (
                         <option key={name} value={name}>{name}</option>
                     ))}
                 </select>
@@ -133,27 +146,48 @@ function ShelfRow({ label, field, options, aggregation, onFieldChange, onAggrega
                     <X size={12} />
                 </button>
             )}
-            <div className="relative shrink-0">
-                <select
-                    value={aggregation}
-                    onChange={(e) => onAggregationChange(e.target.value as VisualizationSpec["aggregation"])}
-                    disabled={!field}
-                    className={cn(
-                        "h-7 pl-2 pr-5 text-[11px] bg-white border border-neutral-200 rounded",
-                        "appearance-none cursor-pointer",
-                        "focus:outline-none focus:ring-1 focus:ring-blue-500",
-                        "disabled:opacity-30 disabled:cursor-not-allowed"
-                    )}
-                >
-                    {AGGREGATIONS.map(a => (
-                        <option key={a.value} value={a.value}>{a.label}</option>
-                    ))}
-                </select>
-                <ChevronDown
-                    size={10}
-                    className="absolute right-1 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none"
-                />
-            </div>
+            {isNumeric && (
+                <div className="relative shrink-0">
+                    <select
+                        value={aggregation}
+                        onChange={(e) => onAggregationChange(e.target.value as VisualizationSpec["aggregation"])}
+                        className={cn(
+                            "h-7 pl-2 pr-5 text-[11px] bg-white border border-neutral-200 rounded",
+                            "appearance-none cursor-pointer",
+                            "focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        )}
+                    >
+                        {AGGREGATIONS.map(a => (
+                            <option key={a.value} value={a.value}>{a.label}</option>
+                        ))}
+                    </select>
+                    <ChevronDown
+                        size={10}
+                        className="absolute right-1 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none"
+                    />
+                </div>
+            )}
+            {isDate && (
+                <div className="relative shrink-0">
+                    <select
+                        value={dateBinning}
+                        onChange={(e) => onDateBinningChange(e.target.value as DateBinning)}
+                        className={cn(
+                            "h-7 pl-2 pr-5 text-[11px] bg-white border border-neutral-200 rounded",
+                            "appearance-none cursor-pointer",
+                            "focus:outline-none focus:ring-1 focus:ring-blue-500"
+                        )}
+                    >
+                        {DATE_BINNINGS.map(b => (
+                            <option key={b.value} value={b.value}>{b.label}</option>
+                        ))}
+                    </select>
+                    <ChevronDown
+                        size={10}
+                        className="absolute right-1 top-1/2 -translate-y-1/2 text-neutral-400 pointer-events-none"
+                    />
+                </div>
+            )}
         </div>
     );
 }
@@ -164,10 +198,14 @@ interface EncodingShelfProps {
     yField: string | null;
     xAggregation: VisualizationSpec["aggregation"];
     yAggregation: VisualizationSpec["aggregation"];
+    xDateBinning: DateBinning;
+    yDateBinning: DateBinning;
     onXFieldChange: (field: string | null) => void;
     onYFieldChange: (field: string | null) => void;
     onXAggregationChange: (agg: VisualizationSpec["aggregation"]) => void;
     onYAggregationChange: (agg: VisualizationSpec["aggregation"]) => void;
+    onXDateBinningChange: (binning: DateBinning) => void;
+    onYDateBinningChange: (binning: DateBinning) => void;
 }
 
 export function EncodingShelf({
@@ -176,10 +214,14 @@ export function EncodingShelf({
     yField,
     xAggregation,
     yAggregation,
+    xDateBinning,
+    yDateBinning,
     onXFieldChange,
     onYFieldChange,
     onXAggregationChange,
     onYAggregationChange,
+    onXDateBinningChange,
+    onYDateBinningChange,
 }: EncodingShelfProps) {
     if (columns.length === 0) return null;
 
@@ -188,18 +230,22 @@ export function EncodingShelf({
             <ShelfRow
                 label="Rows"
                 field={xField}
-                options={sortedFieldNames(columns, "categorical")}
+                columns={columns}
                 aggregation={xAggregation}
+                dateBinning={xDateBinning}
                 onFieldChange={onXFieldChange}
                 onAggregationChange={onXAggregationChange}
+                onDateBinningChange={onXDateBinningChange}
             />
             <ShelfRow
                 label="Columns"
                 field={yField}
-                options={sortedFieldNames(columns, "numeric")}
+                columns={columns}
                 aggregation={yAggregation}
+                dateBinning={yDateBinning}
                 onFieldChange={onYFieldChange}
                 onAggregationChange={onYAggregationChange}
+                onDateBinningChange={onYDateBinningChange}
             />
         </div>
     );

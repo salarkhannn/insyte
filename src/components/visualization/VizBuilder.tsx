@@ -114,6 +114,14 @@ export function VizBuilder() {
 
     const { numeric, categorical, all } = getFieldsByType(columns);
 
+    const handleXFieldChange = useCallback((value: string) => {
+        setXField(value, columns);
+    }, [columns, setXField]);
+
+    const handleYFieldChange = useCallback((value: string) => {
+        setYField(value, columns);
+    }, [columns, setYField]);
+
     const handleApply = useCallback(() => {
         const spec = buildSpec(columns);
         if (spec) {
@@ -173,7 +181,7 @@ export function VizBuilder() {
                         <Select
                             label="Category (X-Axis)"
                             value={xField}
-                            onChange={setXField}
+                            onChange={handleXFieldChange}
                             placeholder="Select field..."
                             options={[
                                 ...categorical.map((c) => ({ value: c.name, label: c.name })),
@@ -185,7 +193,7 @@ export function VizBuilder() {
                         <Select
                             label="Value (Y-Axis)"
                             value={yField}
-                            onChange={setYField}
+                            onChange={handleYFieldChange}
                             placeholder="Select field..."
                             options={[
                                 ...numeric.map((c) => ({ value: c.name, label: c.name })),
