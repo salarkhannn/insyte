@@ -4,6 +4,7 @@ import type { ChartData, BarChartConfig } from "../../../types";
 import { barChartDefaults } from "./chartDefaults";
 import { getChartColor, formatValue, truncateLabel, chartConfig as cfgStyle } from "./chartConfig";
 import { useChartInstanceStore } from "../../../stores/chartInstanceStore";
+import { ScrollableChartWrapper } from "./ScrollableChartWrapper";
 
 interface BarChartProps {
     data: ChartData;
@@ -149,5 +150,12 @@ export function BarChart({ data, config }: BarChartProps) {
         chartRef.current.setOption(option, true);
     }, [data, config]);
 
-    return <div className="w-full h-full"><div ref={containerRef} className="w-full h-full" /></div>;
+    return (
+        <ScrollableChartWrapper
+            dataPointCount={data.labels.length}
+            scrollDirection={isHorizontal ? "vertical" : "horizontal"}
+        >
+            <div ref={containerRef} className="w-full h-full" />
+        </ScrollableChartWrapper>
+    );
 }

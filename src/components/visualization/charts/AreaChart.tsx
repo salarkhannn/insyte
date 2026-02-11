@@ -4,6 +4,7 @@ import type { ChartData, AreaChartConfig } from "../../../types";
 import { areaChartDefaults } from "./chartDefaults";
 import { getChartColor, formatValue, truncateLabel, chartConfig as cfgStyle } from "./chartConfig";
 import { useChartInstanceStore } from "../../../stores/chartInstanceStore";
+import { ScrollableChartWrapper } from "./ScrollableChartWrapper";
 
 interface AreaChartProps {
     data: ChartData;
@@ -146,8 +147,11 @@ export function AreaChart({ data, config }: AreaChartProps) {
     }, [data, config]);
 
     return (
-        <div className="w-full h-full">
+        <ScrollableChartWrapper
+            dataPointCount={data.labels.length}
+            scrollDirection="horizontal"
+        >
             <div ref={containerRef} className="w-full h-full" />
-        </div>
+        </ScrollableChartWrapper>
     );
 }

@@ -4,6 +4,7 @@ import type { ChartData, LineChartConfig } from "../../../types";
 import { lineChartDefaults } from "./chartDefaults";
 import { getChartColor, formatValue, truncateLabel, chartConfig as cfgStyle } from "./chartConfig";
 import { useChartInstanceStore } from "../../../stores/chartInstanceStore";
+import { ScrollableChartWrapper } from "./ScrollableChartWrapper";
 
 interface LineChartProps {
     data: ChartData;
@@ -140,8 +141,11 @@ export function LineChart({ data, config }: LineChartProps) {
     }, [data, config]);
 
     return (
-        <div className="w-full h-full">
+        <ScrollableChartWrapper
+            dataPointCount={data.labels.length}
+            scrollDirection="horizontal"
+        >
             <div ref={containerRef} className="w-full h-full" />
-        </div>
+        </ScrollableChartWrapper>
     );
 }
