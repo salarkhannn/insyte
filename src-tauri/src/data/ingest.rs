@@ -35,6 +35,70 @@ fn df_to_columns(df: &DataFrame) -> Vec<ColumnInfo> {
         .collect()
 }
 
+fn try_parse_dates(df: DataFrame) -> DataFrame {
+    let mut df = df;
+    let date_formats = vec![
+        "%Y-%m-%d",
+        "%Y/%m/%d",
+        "%m/%d/%Y",
+        "%m-%d-%Y",
+        "%d/%m/%Y",
+        "%d-%m-%Y",
+        "%Y-%m-%d %H:%M:%S",
+        "%Y/%m/%d %H:%M:%S",
+    ];
+
+    let string_cols: Vec<(usize, String)> = df
+        .get_columns()
+        .iter()
+        .enumerate()
+        .filter(|(_, col)| matches!(col.dtype(), DataType::String))
+        .map(|(idx, col)| (idx, col.name().to_string()))
+        .collect();
+
+    for (idx, col_name) in string_cols {
+        let col = df.column(&col_name).unwrap();
+        
+        let sample_size = 100.min(col.len());
+        let mut successful_parses = 0;
+        let mut found_format: Option<&str> = None;
+
+        for format in &date_formats {
+            let mut parses = 0;
+            for i in 0..sample_size {
+                if let Ok(AnyValue::String(s)) = col.get(i) {
+                    if s.is_empty() {
+                        continue;
+                    }
+                    if chrono::NaiveDate::parse_from_str(s, format).is_ok()
+                        || chrono::NaiveDateTime::parse_from_str(s, format).is_ok()
+                    {
+                        parses += 1;
+                    }
+                }
+            }
+            
+            if parses > successful_parses {
+                successful_parses = parses;
+                found_format = Some(format);
+            }
+        }
+
+        if successful_parses > 0 && successful_parses as f64 / sample_size as f64 > 0.8 {
+            if let Some(format) = found_format {
+                if let Ok(parsed) = col
+                    .str()
+                    .and_then(|ca| ca.as_date(Some(format), false))
+                {
+                    df.replace(&col_name, parsed.into_series()).ok();
+                }
+            }
+        }
+    }
+
+    df
+}
+
 fn df_to_rows(df: &DataFrame, offset: usize, limit: usize) -> Vec<Vec<serde_json::Value>> {
     let height = df.height();
     let end = (offset + limit).min(height);
@@ -67,6 +131,8 @@ fn df_to_rows(df: &DataFrame, offset: usize, limit: usize) -> Vec<Vec<serde_json
                     Some(AnyValue::Boolean(v)) => serde_json::json!(v),
                     Some(AnyValue::String(v)) => serde_json::json!(v),
                     Some(AnyValue::StringOwned(v)) => serde_json::json!(v.to_string()),
+                    Some(AnyValue::Date(d)) => serde_json::json!(d.to_string()),
+                    Some(AnyValue::Datetime(dt, _, _)) => serde_json::json!(dt.to_string()),
                     Some(v) => serde_json::json!(v.to_string()),
                     None => serde_json::Value::Null,
                 }
@@ -103,6 +169,9 @@ pub async fn load_csv(
         .with_ignore_errors(true)
         .try_into_reader_with_file_path(Some(file_path.clone()))?
         .finish()?;
+
+    // Try to detect and parse date columns
+    let df = try_parse_dates(df);
 
     let columns = df_to_columns(&df);
     let row_count = df.height();
@@ -148,6 +217,9 @@ pub async fn load_json(
 
     let file = fs::File::open(&path)?;
     let df = JsonReader::new(file).finish()?;
+
+    // Try to detect and parse date columns
+    let df = try_parse_dates(df);
 
     let columns = df_to_columns(&df);
     let row_count = df.height();
@@ -286,6 +358,9 @@ pub async fn load_excel(
                 }
 
                 if let Ok(df) = DataFrame::new(columns_data) {
+                    // Try to detect and parse date columns
+                    let df = try_parse_dates(df);
+                    
                     let row_count = df.height();
                     let columns = df_to_columns(&df);
                     

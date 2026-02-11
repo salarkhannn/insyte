@@ -11,6 +11,9 @@ interface PieChartProps {
 }
 
 export function PieChart({ data, config }: PieChartProps) {
+    console.log("[DEBUG] PieChart - Rendering with data:", data);
+    console.log("[DEBUG] PieChart - Config:", config);
+    
     const containerRef = useRef<HTMLDivElement | null>(null);
     const chartRef = useRef<echarts.ECharts | null>(null);
     const resizeObserverRef = useRef<ResizeObserver | null>(null);

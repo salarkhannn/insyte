@@ -61,7 +61,6 @@ export function ChartOptionsPanel({ chartType, disabled }: ChartOptionsPanelProp
 
         if (chartType === "bar") {
             const setters: Record<string, () => void> = {
-                orientation: () => chartConfigStore.setBarOrientation(newValue as "vertical" | "horizontal"),
                 stacked: () => chartConfigStore.setBarStacked(newValue as boolean),
                 showValueLabels: () => chartConfigStore.setBarShowValueLabels(newValue as boolean),
                 barRadius: () => chartConfigStore.setBarRadius(newValue as number),

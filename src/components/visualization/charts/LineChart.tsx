@@ -23,6 +23,9 @@ const stepTypeMap: Record<string, string | undefined> = {
 };
 
 export function LineChart({ data, config }: LineChartProps) {
+    console.log("[DEBUG] LineChart - Rendering with data:", data);
+    console.log("[DEBUG] LineChart - Config:", config);
+    
     const containerRef = useRef<HTMLDivElement | null>(null);
     const chartRef = useRef<echarts.ECharts | null>(null);
     const resizeObserverRef = useRef<ResizeObserver | null>(null);

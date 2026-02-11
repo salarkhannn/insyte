@@ -5,5 +5,6 @@ export { DataTable } from "./DataTable";
 export { TableView } from "./TableView";
 export { DataPanel } from "./DataPanel";
 export { EncodingPanel } from "./EncodingPanel";
+export { EncodingShelf } from "./EncodingShelf";
 export { ChartTypeSelector } from "./ChartTypeSelector";
 export { ChartOptionsPanel } from "./ChartOptionsPanel";

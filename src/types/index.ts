@@ -6,11 +6,21 @@ export interface Column {
     nullable: boolean;
 }
 
+export type DateBinning = "year" | "quarter" | "month" | "day";
+
+export interface FieldEncoding {
+    field: string;
+    aggregation?: "sum" | "avg" | "count" | "max" | "min" | "median";
+    dateBinning?: DateBinning;
+}
+
 export interface VisualizationSpec {
     chartType: "bar" | "line" | "area" | "pie" | "scatter";
     xField: string;
     yField: string;
     aggregation: "sum" | "avg" | "count" | "max" | "min" | "median";
+    xDateBinning?: DateBinning;
+    yDateBinning?: DateBinning;
     groupBy: string | null;
     sortBy: "x" | "y" | "none";
     sortOrder: "asc" | "desc" | "none";
@@ -92,6 +102,7 @@ export interface ChartMetadata {
     topNValue?: number;
     /** Human-readable warning for UI display */
     warningMessage?: string;
+    swapped?: boolean;
 }
 
 /** Reason for data reduction - used for UI feedback */

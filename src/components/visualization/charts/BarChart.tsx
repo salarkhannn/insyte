@@ -17,7 +17,7 @@ export function BarChart({ data, config }: BarChartProps) {
     const setInstance = useChartInstanceStore((state) => state.setInstance);
 
     const cfg = { ...barChartDefaults, ...config };
-    const isHorizontal = cfg.orientation === "horizontal";
+    const isHorizontal = data.metadata?.swapped === true;
 
     const buildOption = (): any => {
         const legendPosition = cfg.legend.position;

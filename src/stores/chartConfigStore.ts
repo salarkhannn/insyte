@@ -18,8 +18,6 @@ interface ChartConfigActions {
     updateConfig: (updates: Partial<ChartConfig>) => void;
     setLegend: (legend: Partial<LegendConfig>) => void;
 
-    // Bar chart
-    setBarOrientation: (orientation: Orientation) => void;
     setBarStacked: (stacked: boolean) => void;
     setBarShowValueLabels: (show: boolean) => void;
     setBarRadius: (radius: number) => void;
@@ -64,12 +62,6 @@ export const useChartConfigStore = create<ChartConfigState & ChartConfigActions>
     setLegend: (legend) => set((state) => ({
         config: { ...state.config, legend: { ...state.config.legend, ...legend } },
     })),
-
-    // Bar chart setters
-    setBarOrientation: (orientation) => set((state) => {
-        if (state.config.type !== "bar") return state;
-        return { config: { ...state.config, orientation } };
-    }),
 
     setBarStacked: (stacked) => set((state) => {
         if (state.config.type !== "bar") return state;

@@ -110,6 +110,8 @@ export function ConfigPanel() {
         xField,
         yField,
         aggregation,
+        xDateBinning,
+        yDateBinning,
         sortBy,
         sortOrder,
         setChartType,
@@ -126,6 +128,14 @@ export function ConfigPanel() {
     const chartConfig = useChartConfigStore((state) => state.config);
     const chartConfigStore = useChartConfigStore();
     const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(["Layout", "Style"]));
+
+    const handleXFieldChange = useCallback((value: string) => {
+        setXField(value, columns);
+    }, [columns, setXField]);
+
+    const handleYFieldChange = useCallback((value: string) => {
+        setYField(value, columns);
+    }, [columns, setYField]);
 
     useEffect(() => {
         if (currentVisualization) {
@@ -151,7 +161,7 @@ export function ConfigPanel() {
                 setActiveView("chart");
             }
         }
-    }, [dataLoaded, chartType, xField, yField, aggregation, sortBy, sortOrder, buildSpec, columns, setVisualization, setActiveView]);
+    }, [dataLoaded, chartType, xField, yField, aggregation, sortBy, sortOrder, buildSpec, columns, setVisualization, setActiveView, xDateBinning, yDateBinning]);
 
     const toggleGroup = useCallback((group: string) => {
         setExpandedGroups(prev => {
@@ -194,7 +204,7 @@ export function ConfigPanel() {
         // Bar chart properties
         if (type === "bar") {
             const setters: Record<string, () => void> = {
-                orientation: () => chartConfigStore.setBarOrientation(newValue as "vertical" | "horizontal"),
+
                 stacked: () => chartConfigStore.setBarStacked(newValue as boolean),
                 showValueLabels: () => chartConfigStore.setBarShowValueLabels(newValue as boolean),
                 barRadius: () => chartConfigStore.setBarRadius(newValue as number),
@@ -366,7 +376,7 @@ export function ConfigPanel() {
                         <Select
                             label=""
                             value={xField}
-                            onChange={setXField}
+                            onChange={handleXFieldChange}
                             placeholder="Select field"
                             disabled={!dataLoaded}
                             options={[
@@ -385,7 +395,7 @@ export function ConfigPanel() {
                         <Select
                             label=""
                             value={yField}
-                            onChange={setYField}
+                            onChange={handleYFieldChange}
                             placeholder="Select field"
                             disabled={!dataLoaded}
                             options={[

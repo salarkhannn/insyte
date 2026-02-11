@@ -23,6 +23,9 @@ const stepTypeMap: Record<string, string | undefined> = {
 };
 
 export function AreaChart({ data, config }: AreaChartProps) {
+    console.log("[DEBUG] AreaChart - Rendering with data:", data);
+    console.log("[DEBUG] AreaChart - Config:", config);
+    
     const containerRef = useRef<HTMLDivElement | null>(null);
     const chartRef = useRef<echarts.ECharts | null>(null);
     const resizeObserverRef = useRef<ResizeObserver | null>(null);
