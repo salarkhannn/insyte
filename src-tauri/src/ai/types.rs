@@ -7,11 +7,17 @@ pub struct VisualizationSpec {
     pub chart_type: ChartType,
     pub x_field: String,
     pub y_field: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub color_field: Option<String>,
     pub aggregation: AggregationType,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub color_aggregation: Option<AggregationType>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub x_date_binning: Option<DateBinGranularity>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub y_date_binning: Option<DateBinGranularity>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub color_date_binning: Option<DateBinGranularity>,
     pub group_by: Option<String>,
     pub sort_by: SortField,
     pub sort_order: SortOrder,

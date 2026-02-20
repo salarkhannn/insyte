@@ -17,6 +17,8 @@ interface ChartConfigActions {
     resetToDefaults: () => void;
     updateConfig: (updates: Partial<ChartConfig>) => void;
     setLegend: (legend: Partial<LegendConfig>) => void;
+    setColorScheme: (colors: string[]) => void;
+    setOpacity: (opacity: number) => void;
 
     setBarStacked: (stacked: boolean) => void;
     setBarShowValueLabels: (show: boolean) => void;
@@ -61,6 +63,14 @@ export const useChartConfigStore = create<ChartConfigState & ChartConfigActions>
 
     setLegend: (legend) => set((state) => ({
         config: { ...state.config, legend: { ...state.config.legend, ...legend } },
+    })),
+
+    setColorScheme: (colorScheme) => set((state) => ({
+        config: { ...state.config, colorScheme },
+    })),
+
+    setOpacity: (opacity) => set((state) => ({
+        config: { ...state.config, opacity },
     })),
 
     setBarStacked: (stacked) => set((state) => {

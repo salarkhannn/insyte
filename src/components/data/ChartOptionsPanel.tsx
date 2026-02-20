@@ -1,10 +1,13 @@
 import { useState, useCallback } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import { useChartConfigStore } from "../../stores/chartConfigStore";
+import { useAppStore } from "../../stores/appStore";
+import { useVizBuilderStore } from "../../stores/vizBuilderStore";
 import {
     getPropertyGroups,
     getPropertiesByGroup,
 } from "../visualization/charts/chartPropertyMeta";
+import { ColorField } from "./ColorField";
 import type { ChartType } from "../../types";
 
 interface ChartOptionsPanelProps {
@@ -15,6 +18,15 @@ interface ChartOptionsPanelProps {
 export function ChartOptionsPanel({ chartType, disabled }: ChartOptionsPanelProps) {
     const chartConfig = useChartConfigStore((state) => state.config);
     const chartConfigStore = useChartConfigStore();
+    const { columns } = useAppStore();
+    const {
+        colorField,
+        colorAggregation,
+        colorDateBinning,
+        setColorField,
+        setColorAggregation,
+        setColorDateBinning,
+    } = useVizBuilderStore();
     const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(["Layout"]));
 
     const toggleGroup = useCallback((group: string) => {
@@ -187,7 +199,7 @@ export function ChartOptionsPanel({ chartType, disabled }: ChartOptionsPanelProp
         }
     };
 
-    if (propertyGroups.length === 0) {
+    if (propertyGroups.length === 0 && !chartType) {
         return (
             <div className="text-xs text-neutral-400 text-center py-2">
                 No options for this chart type
@@ -196,32 +208,48 @@ export function ChartOptionsPanel({ chartType, disabled }: ChartOptionsPanelProp
     }
 
     return (
-        <div className="space-y-1">
-            {propertyGroups.map((group) => {
-                const properties = getPropertiesByGroup(chartType, group);
-                if (properties.length === 0) return null;
+        <div className="space-y-2">
+            {/* Color Field Section */}
+            <ColorField
+                columns={columns}
+                field={colorField}
+                aggregation={colorAggregation}
+                dateBinning={colorDateBinning}
+                onFieldChange={(field) => setColorField(field, columns)}
+                onAggregationChange={setColorAggregation}
+                onDateBinningChange={setColorDateBinning}
+            />
 
-                const isExpanded = expandedGroups.has(group);
+            {/* Property Groups */}
+            {propertyGroups.length > 0 && (
+                <div className="space-y-1">
+                    {propertyGroups.map((group) => {
+                        const properties = getPropertiesByGroup(chartType!, group);
+                        if (properties.length === 0) return null;
 
-                return (
-                    <div key={group} className="border border-neutral-100 rounded">
-                        <button
-                            onClick={() => toggleGroup(group)}
-                            className="w-full px-2 py-1.5 flex items-center gap-1.5 text-[11px] font-medium text-neutral-600 hover:bg-neutral-50 rounded-t"
-                        >
-                            <span className="text-neutral-400">
-                                {isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
-                            </span>
-                            <span>{group}</span>
-                        </button>
-                        {isExpanded && (
-                            <div className="px-2 pb-2">
-                                {properties.map((prop) => renderPropertyControl(prop))}
+                        const isExpanded = expandedGroups.has(group);
+
+                        return (
+                            <div key={group} className="border border-neutral-100 rounded">
+                                <button
+                                    onClick={() => toggleGroup(group)}
+                                    className="w-full px-2 py-1.5 flex items-center gap-1.5 text-[11px] font-medium text-neutral-600 hover:bg-neutral-50 rounded-t"
+                                >
+                                    <span className="text-neutral-400">
+                                        {isExpanded ? <ChevronDown size={12} /> : <ChevronRight size={12} />}
+                                    </span>
+                                    <span>{group}</span>
+                                </button>
+                                {isExpanded && (
+                                    <div className="px-2 pb-2">
+                                        {properties.map((prop) => renderPropertyControl(prop))}
+                                    </div>
+                                )}
                             </div>
-                        )}
-                    </div>
-                );
-            })}
+                        );
+                    })}
+                </div>
+            )}
         </div>
     );
 }

@@ -233,6 +233,25 @@ fn apply_aggregation(
     Ok(df.group_by([col(x_field)]).agg([agg_expr]))
 }
 
+fn apply_stacked_aggregation(
+    df: LazyFrame,
+    x_field: &str,
+    y_field: &str,
+    color_field: &str,
+    aggregation: &AggregationType,
+) -> Result<LazyFrame, DataError> {
+    let agg_expr = match aggregation {
+        AggregationType::Sum => col(y_field).sum().alias("value"),
+        AggregationType::Avg => col(y_field).mean().alias("value"),
+        AggregationType::Count => col(y_field).count().alias("value"),
+        AggregationType::Min => col(y_field).min().alias("value"),
+        AggregationType::Max => col(y_field).max().alias("value"),
+        AggregationType::Median => col(y_field).median().alias("value"),
+    };
+
+    Ok(df.group_by([col(x_field), col(color_field)]).agg([agg_expr]))
+}
+
 fn apply_date_binning(
     df: LazyFrame,
     column: &str,
@@ -398,6 +417,79 @@ fn series_to_strings(series: &Series) -> Result<Vec<String>, DataError> {
     Ok(result)
 }
 
+/// Extract data for stacked charts with color field.
+/// Returns labels (unique x values) and multiple datasets (one per color value).
+fn extract_stacked_chart_data(
+    df: DataFrame,
+    x_field: &str,
+    color_field: &str,
+) -> Result<(Vec<String>, Vec<ChartDataset>), DataError> {
+    use std::collections::{HashMap, HashSet};
+
+    // Get unique x values for labels
+    let x_col = df
+        .column(x_field)
+        .map_err(|e| DataError::ParseError(e.to_string()))?;
+    let x_strings = series_to_strings(x_col)?;
+    let x_unique: Vec<String> = {
+        let mut seen = HashSet::new();
+        let mut unique = Vec::new();
+        for val in &x_strings {
+            if seen.insert(val.clone()) {
+                unique.push(val.clone());
+            }
+        }
+        unique
+    };
+
+    // Get color values and data
+    let color_col = df
+        .column(color_field)
+        .map_err(|e| DataError::ParseError(e.to_string()))?;
+    let color_strings = series_to_strings(color_col)?;
+
+    let value_col = df
+        .column("value")
+        .map_err(|e| DataError::ParseError(e.to_string()))?;
+    let values: Vec<f64> = value_col
+        .cast(&DataType::Float64)
+        .map_err(|e| DataError::ParseError(e.to_string()))?
+        .f64()
+        .map_err(|e| DataError::ParseError(e.to_string()))?
+        .into_no_null_iter()
+        .collect();
+
+    // Group by color value
+    let mut color_data: HashMap<String, HashMap<String, f64>> = HashMap::new();
+    for i in 0..x_strings.len() {
+        let x_val = &x_strings[i];
+        let color_val = &color_strings[i];
+        let value = values[i];
+
+        color_data
+            .entry(color_val.clone())
+            .or_insert_with(HashMap::new)
+            .insert(x_val.clone(), value);
+    }
+
+    // Create datasets - one per color value
+    let mut datasets = Vec::new();
+    for (color_label, data_map) in color_data {
+        let data: Vec<f64> = x_unique
+            .iter()
+            .map(|x_val| *data_map.get(x_val).unwrap_or(&0.0))
+            .collect();
+
+        datasets.push(ChartDataset {
+            label: color_label,
+            data,
+            color: None,
+        });
+    }
+
+    Ok((x_unique, datasets))
+}
+
 // ============================================================================
 // CARDINALITY ANALYSIS
 // ============================================================================
@@ -488,7 +580,12 @@ async fn execute_visualization_query_internal(
     let df = data_state.get_active_dataframe().ok_or(DataError::NoData)?.clone();
     let total_records = df.height();
 
-    for field_name in [&spec.x_field, &spec.y_field] {
+    let mut required_fields = vec![&spec.x_field, &spec.y_field];
+    if let Some(ref color_field) = spec.color_field {
+        required_fields.push(color_field);
+    }
+
+    for field_name in required_fields {
         if df.column(field_name).is_err() {
             return Err(DataError::ColumnNotFound {
                 column: field_name.clone(),
@@ -548,6 +645,17 @@ async fn execute_visualization_query_internal(
     let mut top_n_value: Option<usize> = None;
     let mut warning_message: Option<String> = None;
 
+    let has_color_field = spec.color_field.is_some();
+    
+    let color_info = if let Some(ref color_field) = spec.color_field {
+        let color_series = df.column(color_field).map_err(|e| DataError::ParseError(e.to_string()))?;
+        let color_dtype = color_series.dtype().clone();
+        let color_is_date = matches!(color_dtype, DataType::Date | DataType::Datetime(_, _));
+        Some((color_field.clone(), color_is_date))
+    } else {
+        None
+    };
+    
     let mut lazy_df = df.lazy();
 
     for filter in &spec.filters {
@@ -566,7 +674,17 @@ async fn execute_visualization_query_internal(
         }
     }
 
-    lazy_df = apply_aggregation(lazy_df, &category_field, &value_field, &effective_aggregation)?;
+    if let Some((color_field, color_is_date)) = color_info {
+        if color_is_date {
+            if let Some(granularity) = spec.color_date_binning {
+                lazy_df = apply_date_binning(lazy_df, &color_field, granularity)?;
+            }
+        }
+
+        lazy_df = apply_stacked_aggregation(lazy_df, &category_field, &value_field, &color_field, &effective_aggregation)?;
+    } else {
+        lazy_df = apply_aggregation(lazy_df, &category_field, &value_field, &effective_aggregation)?;
+    }
 
     let aggregated_df = lazy_df
         .clone()
@@ -612,7 +730,27 @@ async fn execute_visualization_query_internal(
         .map_err(|e| DataError::ParseError(e.to_string()))?;
 
     let returned_points = result_df.height();
-    let (labels, data) = extract_chart_data(result_df, &category_field)?;
+    
+    let (labels, datasets) = if has_color_field {
+        let color_field = spec.color_field.as_ref().unwrap();
+        extract_stacked_chart_data(result_df, &category_field, color_field)?
+    } else {
+        let (labels, data) = extract_chart_data(result_df, &category_field)?;
+        let agg_label = match effective_aggregation {
+            AggregationType::Sum => format!("Sum of {}", value_field),
+            AggregationType::Avg => format!("Average of {}", value_field),
+            AggregationType::Count => format!("Count of {}", value_field),
+            AggregationType::Min => format!("Min of {}", value_field),
+            AggregationType::Max => format!("Max of {}", value_field),
+            AggregationType::Median => format!("Median of {}", value_field),
+        };
+        let dataset = ChartDataset {
+            label: agg_label,
+            data,
+            color: None,
+        };
+        (labels, vec![dataset])
+    };
 
     let agg_label = match effective_aggregation {
         AggregationType::Sum => format!("Sum of {}", value_field),
@@ -631,11 +769,7 @@ async fn execute_visualization_query_internal(
 
     Ok(ChartData {
         labels,
-        datasets: vec![ChartDataset {
-            label: agg_label.clone(),
-            data,
-            color: None,
-        }],
+        datasets,
         metadata: ChartMetadata {
             title: spec.title,
             x_label,

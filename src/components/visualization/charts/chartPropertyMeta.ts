@@ -25,13 +25,6 @@ interface PropertyMetadata {
 
 export const barChartProperties: PropertyMetadata[] = [
     {
-        key: "stacked",
-        label: "Stacked",
-        type: "boolean",
-        default: false,
-        group: "Layout",
-    },
-    {
         key: "showValueLabels",
         label: "Show Value Labels",
         type: "boolean",
@@ -251,7 +244,7 @@ export const commonProperties: PropertyMetadata[] = [
 // ============================================================================
 
 export const chartPropertyMap: Record<ChartType, PropertyMetadata[]> = {
-    bar: [...barChartProperties, ...commonProperties],
+    bar: barChartProperties,
     line: [...lineChartProperties, ...commonProperties],
     area: [...areaChartProperties, ...commonProperties],
     pie: [...pieChartProperties, ...commonProperties],

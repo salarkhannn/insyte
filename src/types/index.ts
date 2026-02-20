@@ -18,9 +18,12 @@ export interface VisualizationSpec {
     chartType: "bar" | "line" | "area" | "pie" | "scatter";
     xField: string;
     yField: string;
+    colorField?: string | null;
     aggregation: "sum" | "avg" | "count" | "max" | "min" | "median";
+    colorAggregation?: "sum" | "avg" | "count" | "max" | "min" | "median";
     xDateBinning?: DateBinning;
     yDateBinning?: DateBinning;
+    colorDateBinning?: DateBinning;
     groupBy: string | null;
     sortBy: "x" | "y" | "none";
     sortOrder: "asc" | "desc" | "none";

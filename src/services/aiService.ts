@@ -5,9 +5,12 @@ interface BackendVisualizationSpec {
     chartType: "bar" | "line" | "area" | "pie" | "scatter";
     xField: string;
     yField: string;
+    colorField?: string | null;
     aggregation: "sum" | "avg" | "count" | "min" | "max" | "median";
+    colorAggregation?: "sum" | "avg" | "count" | "min" | "max" | "median" | null;
     xDateBinning?: "year" | "quarter" | "month" | "day" | null;
     yDateBinning?: "year" | "quarter" | "month" | "day" | null;
+    colorDateBinning?: "year" | "quarter" | "month" | "day" | null;
     groupBy: string | null;
     sortBy: "x" | "y" | "none";
     sortOrder: "asc" | "desc" | "none";
@@ -86,8 +89,11 @@ function transformVisualizationSpec(spec: BackendVisualizationSpec): Visualizati
         })),
         chartConfig: spec.chartConfig as VisualizationSpec["chartConfig"],
     };
+    if (spec.colorField) result.colorField = spec.colorField;
+    if (spec.colorAggregation) result.colorAggregation = spec.colorAggregation;
     if (spec.xDateBinning) result.xDateBinning = spec.xDateBinning;
     if (spec.yDateBinning) result.yDateBinning = spec.yDateBinning;
+    if (spec.colorDateBinning) result.colorDateBinning = spec.colorDateBinning;
     return result;
 }
 
@@ -96,9 +102,12 @@ function transformVisualizationSpecToBackend(spec: VisualizationSpec): BackendVi
         chartType: spec.chartType,
         xField: spec.xField,
         yField: spec.yField,
+        colorField: spec.colorField ?? null,
         aggregation: spec.aggregation,
+        colorAggregation: spec.colorAggregation ?? null,
         xDateBinning: spec.xDateBinning ?? null,
         yDateBinning: spec.yDateBinning ?? null,
+        colorDateBinning: spec.colorDateBinning ?? null,
         groupBy: spec.groupBy,
         sortBy: spec.sortBy,
         sortOrder: spec.sortOrder,

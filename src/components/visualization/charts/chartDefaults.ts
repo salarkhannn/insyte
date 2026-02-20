@@ -22,6 +22,7 @@ const defaultLegendConfig: LegendConfig = {
 
 const baseChartDefaults = {
     colorScheme: [...colors.chart] as string[],
+    opacity: 1,
     animationDuration: 300,
     tooltip: { ...defaultTooltipConfig },
     legend: { ...defaultLegendConfig },

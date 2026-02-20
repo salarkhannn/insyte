@@ -24,6 +24,7 @@ export interface LegendConfig {
 export interface BaseChartConfig {
     type: ChartType;
     colorScheme: string[];
+    opacity: number;
     animationDuration: number;
     tooltip: TooltipConfig;
     legend: LegendConfig;

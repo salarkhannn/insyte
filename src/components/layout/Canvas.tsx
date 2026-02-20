@@ -38,16 +38,22 @@ export function Canvas() {
         chartType,
         xField,
         yField,
+        colorField,
         aggregation,
         xAggregation,
+        colorAggregation,
         xDateBinning,
         yDateBinning,
+        colorDateBinning,
         setXField,
         setYField,
+        setColorField,
         setAggregation,
         setXAggregation,
+        setColorAggregation,
         setXDateBinning,
         setYDateBinning,
+        setColorDateBinning,
         buildSpec,
     } = useVizBuilderStore();
 
@@ -67,7 +73,7 @@ export function Canvas() {
                 setActiveView("chart");
             }
         }
-    }, [dataLoaded, chartType, xField, yField, aggregation, xDateBinning, yDateBinning, buildSpec, columns, setVisualization, setActiveView]);
+    }, [dataLoaded, chartType, xField, yField, colorField, aggregation, colorAggregation, xDateBinning, yDateBinning, colorDateBinning, buildSpec, columns, setVisualization, setActiveView]);
 
     return (
         <main className="flex-1 flex flex-col overflow-hidden bg-neutral-100/50 relative">
