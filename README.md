@@ -7,7 +7,7 @@ Insyte is a cross-platform desktop application that combines spreadsheet-grade d
 ## Downloads
 
 <p>
-  <a href="https://github.com/insyte-labs/insyte/releases/download/v0.1.0/insyte_0.1.0_amd64.deb">
+  <a href="https://github.com/salarkhannn/insyte/releases/download/v0.1.0/insyte_0.1.0_amd64.deb">
     <img alt="Download for Ubuntu" src="https://img.shields.io/badge/Ubuntu-.deb%20Download-2ea44f?style=for-the-badge&logo=ubuntu&logoColor=white">
   </a>
   <img alt="Windows coming soon" src="https://img.shields.io/badge/Windows-Coming%20Soon-6b7280?style=for-the-badge&logo=windows&logoColor=white">
