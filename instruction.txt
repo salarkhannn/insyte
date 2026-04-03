@@ -1,1 +1,16 @@
-The code you write should not contain any comments or practices that might indicate use of LLM. the code should read and work like it was written by a highly skilled engineer.
+If you have any questions or ambiguities, ask before starting to write code. Follow the principles of KISS.The code you write should not contain any comments or practices that might indicate use of LLM. the code should read and work like it was written by a highly skilled engineer.
+The UI you design or modify must not exhibit characteristics commonly associated with low-quality or generic AI-generated interfaces. Avoid excessive gradients, unnecessary animations, novelty layouts, decorative elements without functional purpose, placeholder aesthetics, or visually loud components. Do not use default component styles without deliberate customization.
+
+The UI must reflect professional, production-grade design standards comparable to mature tools such as Power BI, Tableau, or other enterprise analytics software. Prioritize clarity, hierarchy, alignment, spacing, and consistency. Visual decisions must be intentional and justified by usability, not decoration.
+
+Follow established UI/UX principles:
+
+* Clear visual hierarchy and predictable layout
+* Consistent spacing, typography, and color usage
+* Subtle, restrained use of color and motion
+* Dense but readable information presentation
+* Minimal chrome; UI elements should serve function first
+* Professional typography choices with appropriate weights and contrast
+* No gimmicks, novelty visuals, or “assistant-style” UI patterns
+
+The resulting UI should look as if it was designed by an experienced senior UI/UX designer working on an enterprise analytics product, not a demo, prototype, or experimental interface.

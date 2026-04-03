@@ -4,6 +4,18 @@ Desktop-first analytics for people who work with data.
 
 Insyte is a cross-platform desktop application that combines spreadsheet-grade data handling with AI-driven visualization. Load your CSV, Excel, or JSON files—ask questions in plain English—get charts that make sense.
 
+## Downloads
+
+<p>
+  <a href="https://github.com/insyte-labs/insyte/releases/download/v0.1.0/insyte_0.1.0_amd64.deb">
+    <img alt="Download for Ubuntu" src="https://img.shields.io/badge/Ubuntu-.deb%20Download-2ea44f?style=for-the-badge&logo=ubuntu&logoColor=white">
+  </a>
+  <img alt="Windows coming soon" src="https://img.shields.io/badge/Windows-Coming%20Soon-6b7280?style=for-the-badge&logo=windows&logoColor=white">
+  <img alt="macOS coming soon" src="https://img.shields.io/badge/macOS-Coming%20Soon-6b7280?style=for-the-badge&logo=apple&logoColor=white">
+</p>
+
+Ubuntu users can install the current release directly from the GitHub release asset above. Windows and macOS packages are planned but not published yet.
+
 ## Why This Exists
 
 Most analytics tools fall into one of two camps: browser-based dashboards that choke on large files, or heavyweight BI platforms that require a data team to operate. Insyte sits in the middle. It's built for analysts, founders, and anyone who needs to explore data without spinning up infrastructure.
@@ -157,7 +169,10 @@ Outputs: `src-tauri/target/aarch64-apple-darwin/release/bundle/dmg/`
 ```bash
 pnpm tauri build --target x86_64-unknown-linux-gnu
 ```
-Outputs: `src-tauri/target/release/bundle/deb/` and `appimage/`
+Outputs:
+- `src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/deb/insyte_0.1.0_amd64.deb`
+- `src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/appimage/insyte_0.1.0_amd64.AppImage`
+- `src-tauri/target/x86_64-unknown-linux-gnu/release/bundle/rpm/insyte-0.1.0-1.x86_64.rpm`
 
 ### Troubleshooting
 
