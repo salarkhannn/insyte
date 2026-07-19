@@ -4,7 +4,6 @@ import type {
     ChartType,
     LegendConfig,
     CurveType,
-    Orientation,
 } from "../types/chartConfigs";
 import { getDefaultConfig } from "../components/visualization/charts/chartDefaults";
 

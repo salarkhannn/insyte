@@ -10,11 +10,13 @@ Insyte is a cross-platform desktop application that combines spreadsheet-grade d
   <a href="https://github.com/salarkhannn/insyte/releases/download/v0.1.0/insyte_0.1.0_amd64.deb">
     <img alt="Download for Ubuntu" src="https://img.shields.io/badge/Ubuntu-.deb%20Download-2ea44f?style=for-the-badge&logo=ubuntu&logoColor=white">
   </a>
-  <img alt="Windows coming soon" src="https://img.shields.io/badge/Windows-Coming%20Soon-6b7280?style=for-the-badge&logo=windows&logoColor=white">
+  <a href="https://github.com/salarkhannn/insyte/releases/download/v0.1.0/insyte_0.1.0_x64-setup.exe">
+    <img alt="Download for Windows" src="https://img.shields.io/badge/Windows-.exe%20Download-0078d4?style=for-the-badge&logo=windows&logoColor=white">
+  </a>
   <img alt="macOS coming soon" src="https://img.shields.io/badge/macOS-Coming%20Soon-6b7280?style=for-the-badge&logo=apple&logoColor=white">
 </p>
 
-Ubuntu users can install the current release directly from the GitHub release asset above. Windows and macOS packages are planned but not published yet.
+Ubuntu and Windows users can install the current release directly from the GitHub release assets above. macOS packages are planned but not published yet.
 
 ## Why This Exists
 
